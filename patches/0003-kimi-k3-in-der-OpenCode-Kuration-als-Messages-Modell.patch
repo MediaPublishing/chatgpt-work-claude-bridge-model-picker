@@ -1,0 +1,40 @@
+From eb6d3c282fe374c4115bb90a00c077ea0dd8605f Mon Sep 17 00:00:00 2001
+From: AInauten <noreply@ainauten.com>
+Date: Thu, 27 Aug 2026 12:13:44 -0400
+Subject: [PATCH 3/3] kimi-k3 in der OpenCode-Kuration als Messages-Modell
+ fuehren
+
+Die Kurationstabelle ist die Quelle fuer die Endpunkt-Familie; stand kimi-k3
+dort weiter unter primaryModels (Chat), widersprach die Modellkonfiguration
+der Kuration und curate-models schlug fehl. Verschieben statt die Assertion
+anzupassen.
+---
+ src/opencode-curation.mjs | 5 ++++-
+ 1 file changed, 4 insertions(+), 1 deletion(-)
+
+diff --git a/src/opencode-curation.mjs b/src/opencode-curation.mjs
+index 1390956..4fed20e 100644
+--- a/src/opencode-curation.mjs
++++ b/src/opencode-curation.mjs
+@@ -178,6 +178,10 @@ const CURATION_ROUTES = Object.freeze({
+     protocols: Object.freeze(["Chat", "Messages", "Responses"]),
+     messagesProvider: "opencode-go-messages",
+     messagesModels: Object.freeze([
++      // Local (2026-08-27): OpenCode moved kimi-k3 off the Chat endpoint on
++      // 2026-08-24; the Chat route stopped returning usable completions for
++      // this id while the Messages route kept working.
++      "kimi-k3",
+       "minimax-m2.5",
+       "minimax-m2.7",
+       "minimax-m3",
+@@ -206,7 +210,6 @@ const CURATION_ROUTES = Object.freeze({
+       "kimi-k2.5",
+       "kimi-k2.6",
+       "kimi-k2.7-code",
+-      "kimi-k3",
+       "longcat-2.0",
+       "mimo-v2.5",
+       "mimo-v2.5-pro",
+-- 
+2.55.0
+
