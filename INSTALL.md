@@ -40,6 +40,8 @@ Existiert `install-state.json` bereits? Dann lies sie, fasse dem Nutzer den Stan
    - **B) Nur den Picker** — zusätzliche Modelle in ChatGPT Work/Codex
    - **C) Beides**
 2. **Welche Abos hast du?** ChatGPT (mit Codex) / Claude / Google Gemini — Mehrfachauswahl.
+
+   **Zu Gemini gleich dazusagen (Stand 2026-08):** Der Login im `gemini`-CLI ist für **private Google-Konten blockiert** — Google hat den Zugang für Einzelnutzer über diesen Weg abgeschaltet. Gemini bleibt trotzdem nutzbar: über Googles Nachfolger **Antigravity** (`agy`), der headless funktioniert. Nennt der Nutzer Gemini, sag ihm das **jetzt**, nicht erst wenn Modul 01 damit scheitert. Die drei Wege stehen in `modules/01-cli-check.md`; und falls keiner passt, ist die Brücke mit Claude und Codex trotzdem vollständig.
 3. Nur bei B/C: **Welche Modellquelle für den Picker?**
    - OpenCode Go (~10 $/Monat flat, empfohlen — Subscriptions vor APIs!) — ggf. mehrere Keys für Rotation
    - OpenRouter Free (kostenlos, aber geteilte Kapazität, oft ausgelastet)
@@ -49,6 +51,8 @@ Existiert `install-state.json` bereits? Dann lies sie, fasse dem Nutzer den Stan
 Schreibe die Antworten nach `install-state.json` unter `interview`.
 
 ## Schritt 2 — Module ausführen
+
+**Vor jedem Modul: sag dem Nutzer in ein bis zwei einfachen Sätzen, was jetzt passiert und warum.** Ohne Fachjargon, ohne Dateinamen, ohne Flags — als würdest du es jemandem erklären, der nur wissen will, was mit seinem Rechner geschieht. Beispiel statt „Modul 03 installiert den codex-router auf Commit bc0ca25": „Jetzt richte ich ein kleines Programm ein, das im Hintergrund läuft und entscheidet, welcher Anbieter deine Anfrage bekommt. Deine GPT-Modelle laufen weiter wie bisher." Am Ende des Moduls in einem Satz sagen, was jetzt anders ist.
 
 Reihenfolge und Zuordnung (jedes Modul ist eigenständig; überspringe, was laut Interview nicht gewählt ist):
 

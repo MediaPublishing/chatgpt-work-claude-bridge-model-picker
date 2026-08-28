@@ -13,6 +13,38 @@ Rüste deine AI-Desktop-Apps gegenseitig auf — mit deinen bestehenden Abos, oh
 
 *Das Ergebnis: ein Picker, alle deine Modelle — plus `/claude`, um dein Claude-Abo direkt aus ChatGPT Work aufzurufen.*
 
+## Was da eigentlich installiert wird
+
+```mermaid
+flowchart LR
+    subgraph DEINE_APPS["Deine Apps auf dem Mac"]
+        CGPT["ChatGPT Work<br/>(dein ChatGPT-Abo)"]
+        CLA["Claude Cowork<br/>(dein Claude-Abo)"]
+    end
+
+    CGPT -. "/claude — frag Claude" .-> CLA
+    CLA -. "/codex — frag ChatGPT" .-> CGPT
+    CGPT -. "/gemini" .-> GEM["Google-CLI<br/>(dein Google-Konto)"]
+    CLA -. "/gemini" .-> GEM
+
+    CGPT ==> ROUTER["Lokaler Verteiler<br/>auf deinem Mac<br/>(127.0.0.1)"]
+
+    ROUTER ==> OPENAI["Bleibt beim ChatGPT-Abo:<br/>die GPT-Modelle"]
+    ROUTER ==> OC["OpenCode Go<br/>(~10 $/Monat pauschal)<br/>DeepSeek, GLM, Qwen …"]
+    ROUTER ==> OR["OpenRouter<br/>(nur Gratis-Modelle)"]
+
+    classDef app fill:#e8f0fe,stroke:#4285f4,color:#111
+    classDef hub fill:#fff4e5,stroke:#f59e0b,color:#111
+    classDef ext fill:#eef7ee,stroke:#34a853,color:#111
+    class CGPT,CLA app
+    class ROUTER hub
+    class GEM,OPENAI,OC,OR ext
+```
+
+**Die gepunkteten Pfeile sind die Brücke.** Deine Apps rufen sich gegenseitig über ihre offiziellen Kommandozeilen-Programme auf. Jede benutzt dabei das Abo, für das du ohnehin zahlst — es kommt nichts oben drauf.
+
+**Die dicken Pfeile sind der Picker.** Ein kleines Programm läuft im Hintergrund auf deinem Mac und verteilt jede Anfrage: GPT-Modelle gehen weiter an dein ChatGPT-Abo, alles andere an den jeweiligen Anbieter. Nach außen geht dabei nichts, was nicht ohnehin an den Anbieter ginge — der Verteiler läuft nur lokal.
+
 ## Installation (ein Befehl)
 
 Öffne deine AI-Desktop-App (ChatGPT Work/Codex **oder** Claude Cowork/Code) und gib ihr diesen Auftrag:

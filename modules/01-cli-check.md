@@ -9,7 +9,7 @@ Du bist der installierende Agent. Arbeite defensiv: Erst den Ist-Zustand festste
 ## Schritt 1 — Bestandsaufnahme (nur lesen)
 
 ```bash
-for c in claude codex gemini; do
+for c in claude codex gemini agy; do
   printf '%s: ' "$c"
   command -v "$c" >/dev/null 2>&1 && command -v "$c" || echo "nicht gefunden"
 done
@@ -74,11 +74,69 @@ Du fragst **nie** nach Passwörtern, Codes oder Tokens. Du nennst nur den Befehl
 |---|---|---|
 | `claude` | `claude` (interaktiv starten) | Dem Anmelde-Link folgen, mit dem Claude-Konto anmelden |
 | `codex` | ChatGPT-Desktop-App öffnen und dort anmelden — oder `codex login` im Terminal | Die App-Anmeldung gilt auch für das App-Binary |
-| `gemini` | `gemini` (interaktiv starten) | Im Auswahlmenü **„Login with Google"** wählen und den Browser-Flow abschließen |
-
-Beim Gemini CLI ausdrücklich **nicht** irgendwelche Auth-Umgebungsvariablen setzen — der OAuth-Weg über „Login with Google" nutzt das Abo, ein API-Key würde stattdessen abrechnen.
+| `gemini` | `gemini` (interaktiv starten) | Im Auswahlmenü **„Login with Google"** wählen und den Browser-Flow abschließen — **siehe Warnung unten** |
 
 Frage nach jedem Login den Nutzer, ob er fertig ist, und prüfe dann mit Schritt 4. Rate nie, ob ein Login geklappt hat.
+
+### Gemini: Einzel-Logins sind derzeit blockiert (Stand 2026-08)
+
+Bei einem privaten Google-Konto scheitert der OAuth-Login im Gemini CLI mit genau dieser Meldung:
+
+```
+Error authenticating: IneligibleTierError: This client is no longer supported for
+Gemini Code Assist for individuals. To continue using Gemini, please migrate to
+the Antigravity suite of products: https://antigravity.google
+```
+
+Das ist **kein Fehler auf dem Rechner des Nutzers** und nichts, was ein Wiederholen löst. Google hat den Zugang für Einzelnutzer über diesen Weg abgeschaltet. Verifiziert mit Gemini CLI 0.57.0.
+
+Randnotiz: **Workspace-/Business-Konten** kommen teils weiterhin per OAuth ins Gemini CLI. Betroffen sind private Einzelkonten. Wenn der Nutzer ein Firmenkonto hat, lass ihn den normalen Login probieren, bevor du auf die Wege unten ausweichst.
+
+Wenn du die Meldung siehst, biete dem Nutzer diese drei Wege an — **in dieser Reihenfolge** — und lass ihn wählen:
+
+**Weg 1 (Empfehlung): Antigravity, Googles offizieller Nachfolger.** Das ist genau der Weg, auf den die Fehlermeldung selbst verweist, und er funktioniert headless.
+
+Erst prüfen, ob das CLI schon da ist:
+
+```bash
+command -v agy && agy --version || echo "agy nicht gefunden"
+```
+
+Ist es vorhanden, direkt den Pong-Test:
+
+```bash
+cd /tmp && agy --print "Antworte mit genau einem Wort: pong"
+```
+
+Kommt `pong` zurück, ist Gemini über Antigravity nutzbar — Modul 02 installiert den `/gemini`-Skill dann ganz normal, er ruft `agy` statt `gemini` auf.
+
+Fehlt `agy`, installiert der **Nutzer** Antigravity von Googles offizieller Seite (`antigravity.google`) und meldet sich **in der App** mit seinem Google-Konto an; das CLI übernimmt diese Anmeldung. Danach neue Shell öffnen und den Test wiederholen. Installiere das nicht ungefragt und lade nichts aus anderen Quellen.
+
+Gültige Modellnamen zeigt `agy models`. Verifiziert (Version 1.1.22): `--print` für den headless Lauf, `--model <slug>` für die Modellwahl, `--effort low|medium|high`. Dokumentiere nichts, was `agy --help` auf dem Rechner des Nutzers nicht belegt — das CLI ist jung und ändert sich.
+
+**Weg 2: API-Key-Modus des Gemini CLIs.** Nur, wenn der Nutzer beim `gemini`-CLI bleiben will.
+
+- Der Nutzer holt sich einen kostenlosen Key auf `aistudio.google.com/apikey`.
+- Der Key kommt in eine Datei mit Rechten 0600, die du nur referenzierst — **nie in den Chat, nie in ein Shell-Argument**:
+
+  ```bash
+  install -m 700 -d "$HOME/.config/bridge-picker"
+  umask 077
+  # Diesen Editor öffnet der NUTZER; du siehst den Inhalt nie.
+  nano "$HOME/.config/bridge-picker/gemini-api-key.env"     # Inhalt: GEMINI_API_KEY=…
+  chmod 600 "$HOME/.config/bridge-picker/gemini-api-key.env"
+  ```
+
+- **Die Umgebungsvariable allein genügt nicht.** Nachgemessen: Mit gesetztem `GEMINI_API_KEY` kommt weiterhin dieselbe `IneligibleTierError`, solange das CLI auf den OAuth-Weg eingestellt ist. Die Auswahl steckt in `~/.gemini/settings.json` unter `security.auth.selectedType` (dort steht dann `oauth-personal`; der Wert für den Key-Weg heißt `gemini-api-key`). **Umstellen soll der Nutzer selbst** im interaktiven CLI über das Auth-Menü — du änderst keine Konfigurationsdateien für ihn.
+- Ehrlich dazusagen, bevor er sich entscheidet:
+  - Das weicht vom Prinzip **„Subscriptions vor APIs"** ab. Es ist der einzige Punkt im ganzen Setup, an dem ein API-Key ins Spiel kommt.
+  - Im **Free-Tier** kostet es nichts, hat aber eigene Ratenlimits.
+  - **Eingaben im Free-Tier dürfen für Modelltraining genutzt werden.** Also nichts Vertrauliches durch diese Brücke schicken — keine Kundendaten, keine unveröffentlichten Inhalte, keine Zugangsdaten.
+  - Hinterlegt er später eine Zahlungsmethode, wird pro Token abgerechnet. Dann gilt: beobachten, nicht vergessen.
+
+**Weg 3: ohne Gemini weitermachen.** Jederzeit in Ordnung. Die Brücke funktioniert mit Claude und Codex vollständig; Gemini ist ein optionales Extra, kein Baustein, auf dem etwas anderes aufbaut. Trage `01-cli-check` für Gemini als `skipped` ein, mit dieser Meldung als Begründung, und mach weiter. Installiere den `/gemini`-Skill in Modul 02 dann **nicht** — eine Brücke zu einem CLI ohne Zugang ist ein garantierter Fehlschlag.
+
+Setz **nie** eigenmächtig Auth-Umgebungsvariablen, um den Fehler zu umgehen. Der Nutzer entscheidet, welchen Weg er will.
 
 ## Schritt 4 — Pong-Test je CLI (der Beleg)
 
@@ -91,9 +149,14 @@ claude -p "Antworte mit genau einem Wort: pong"
 # Codex (App-Binary bevorzugt, Arbeitsverzeichnis bewusst neutral)
 cd /tmp && "$CODEX_BIN" exec --skip-git-repo-check "Antworte mit genau einem Wort: pong"
 
-# Gemini (stdin schließen, sonst wartet das CLI)
+# Gemini über Antigravity (der Weg, der bei privaten Konten funktioniert)
+cd /tmp && agy --print "Antworte mit genau einem Wort: pong"
+
+# Gemini über das gemini-CLI (stdin schließen, sonst wartet das CLI)
 gemini -p "Antworte mit genau einem Wort: pong" < /dev/null
 ```
+
+Für Gemini genügt **einer** der beiden Tests. Welcher zählt, hängt davon ab, welchen Weg der Nutzer gewählt hat — notiere im Beleg mit, welcher es war.
 
 Erwartet: die Ausgabe enthält `pong`. Zeige dem Nutzer die **echte Ausgabe**, nicht deine Zusammenfassung davon.
 
@@ -105,6 +168,7 @@ Eine leere Antwort ist ein Fehler, kein Erfolg.
 |---|---|---|
 | `command not found` | CLI nicht installiert oder nicht im PATH | Schritt 2, danach neue Shell öffnen |
 | `Please set an Auth method` (gemini) | Kein OAuth-Login | Nutzer startet `gemini` einmal interaktiv, „Login with Google" |
+| `IneligibleTierError: This client is no longer supported for Gemini Code Assist for individuals` | Google hat den Einzelnutzer-Zugang über diesen Weg abgeschaltet. Kein lokaler Fehler | Nicht wiederholen. Die drei Wege oben anbieten; Empfehlung: ohne Gemini weitermachen |
 | Anmelde-/Auth-Fehler bei `claude` | Kein Login oder abgelaufen | Nutzer startet `claude` interaktiv |
 | `failed to parse model_catalog_json` (codex) | Zu alte PATH-Version gegen neuen Katalog | App-Binary nutzen (`$CODEX_BIN`) oder CLI aktualisieren |
 | `429`, `quota`, `usage limit` | Kontingent erschöpft | Melden, **nicht** wiederholen. Details in `LEARNINGS.md` |
