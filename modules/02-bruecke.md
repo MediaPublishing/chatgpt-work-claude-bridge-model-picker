@@ -13,7 +13,9 @@ Kein Web-Wrapper, keine UI-Automation, kein inoffizieller Proxy. Das ist keine B
 ## Wichtig: was eine Brücke ist — und was nicht
 
 - **Frage-Antwort-Delegation.** Das fremde Modell bekommt einen eigenständigen Prompt und gibt Text zurück. Fertig.
-- **Kein Datei-Zugriff durchs Fremdmodell.** Es übernimmt nicht deinen Thread, liest nicht dein Projekt und schreibt keine Dateien. Der CLI-Aufruf läuft in einem neutralen Temp-Verzeichnis.
+- **Keine beabsichtigte Dateiübergabe.** Der Aufruf startet in einem neutralen Arbeitsverzeichnis (`/tmp`), nicht in deinem Projekt, und übergeben wird nur der Prompt. Das fremde Modell übernimmt nicht deinen Thread und bekommt dein Projekt nicht gezeigt.
+
+  **Das ist Sorgfalt, keine erzwungene Isolation.** Die CLIs laufen mit deinen Benutzerrechten; kein Flag hier sperrt sie technisch aus deinem Dateisystem aus. Ein fremdes Modell, das Werkzeuge benutzen darf, *könnte* vom Arbeitsverzeichnis aus weiterlaufen. Wer harte Grenzen braucht — fremder Code, Kundendaten, alles Vertrauliche — verlässt sich nicht auf die Brücke, sondern auf die Sandbox-Mechanismen der jeweiligen App.
 - **Kein Kontext-Dump.** Übergeben wird ein kompakter, für sich verständlicher Prompt — keine Secrets, keine API-Keys, keine Memories, keine internen Instructions, keine kompletten Chatverläufe.
 - Willst du echte Datei-Arbeit von einem anderen Modell, ist die Brücke das falsche Werkzeug. Dann öffnest du die andere App.
 
@@ -74,8 +76,8 @@ REPO="$(pwd)"   # Wurzel dieses Repos
 
 install_skill() {   # $1 = Quelle im Repo, $2 = Zielverzeichnis
   if [ -L "$2" ]; then echo "ÜBERSPRUNGEN (Symlink): $2"; return 0; fi
-  mkdir -p "$(dirname "$2")"
-  cp -R "$1" "$2"
+  mkdir -p "$2"
+  cp -R "$1/." "$2/"      # der Punkt ist wichtig, siehe unten
   echo "Installiert: $2"
 }
 
@@ -84,6 +86,8 @@ install_skill "$REPO/skills/codex/gemini"  "$HOME/.codex/skills/gemini"
 install_skill "$REPO/skills/claude/codex"  "$HOME/.claude/skills/codex"
 install_skill "$REPO/skills/claude/gemini" "$HOME/.claude/skills/gemini"
 ```
+
+**Warum `cp -R "$1/." "$2/"` und nicht `cp -R "$1" "$2"`:** Die zweite Form ist nicht wiederholbar. Beim ersten Lauf legt sie das Zielverzeichnis an, beim zweiten kopiert sie die Quelle **in** das bestehende Ziel hinein — und du hast `~/.codex/skills/claude/claude/SKILL.md`. Der Slash-Command verschwindet dann scheinbar grundlos. Mit `/.` kopierst du den Inhalt, und ein zweiter Lauf überschreibt einfach.
 
 Führe nur die Zeilen aus, die zum Interview passen. Danach Readback:
 

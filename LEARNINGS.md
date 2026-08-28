@@ -66,26 +66,30 @@ Und: Bildeingaben bei gerouteten Modellen **nicht** von Hand freischalten. Dann 
 
 ## 4. Limits verstehen: was wirklich zählt
 
-### Beim Flat-Abo zählen Requests, nicht Tokens
+### Beim Flat-Abo bestimmt die Zahl der Turns dein Tempo
 
-Ein Go-Plan zählt **Anfragen** gegen die Limits, nicht verbrauchte Tokens. Das dreht die Intuition um:
+Wie ein Go-Plan intern zählt, **veröffentlicht der Anbieter nicht** — weder „so und so viele Anfragen" noch ein Token-Budget. Beobachtbar ist nur das Verhalten: Man läuft ins Limit, lange bevor eine Token-Rechnung eine Rolle spielte, und viele kleine Turns bringen einen dorthin schneller als wenige große.
 
-- Ein einziger großer Auftrag an ein starkes Modell kostet **eine** Anfrage.
-- Zwanzig kleine Rückfragen, Retries und Werkzeug-Runden kosten **zwanzig**.
+Als Arbeitsregel taugt das trotzdem, und sie dreht die Intuition um:
 
-**Nicht die großen Modelle fressen dein Kontingent, sondern viele kleine Turns.** Ein Agent, der in Schleife nachhakt, ist teurer als ein durchdachter Einzelauftrag.
+- Ein einziger großer Auftrag an ein starkes Modell ist **ein** Turn.
+- Zwanzig kleine Rückfragen, Retries und Werkzeug-Runden sind **zwanzig**.
+
+**Nicht die großen Modelle fressen dein Kontingent, sondern viele kleine Turns.** Ein Agent, der in Schleife nachhakt, kommt teurer als ein durchdachter Einzelauftrag.
 
 Praktisch heißt das:
 
 - Aufträge vorne sauber formulieren, statt sich in zehn Runden heranzutasten.
 - Automatische Retries begrenzen. Ein Retry auf ein Kontingent-429 ist reine Verschwendung.
 - **Parallele Threads drosseln.** Fünf gleichzeitig laufende Agenten multiplizieren den Verbrauch, nicht die Ergebnisse.
-- Beim Verbrauch hinsehen, nicht schätzen — dafür sind die Picker-Verbrauchslabels aus Modul 05 da.
+- Beim eigenen Verhalten hinsehen, nicht schätzen — dafür sind die Picker-Verbrauchslabels aus Modul 05 da. Sie zeigen **deine lokale Aktivität**, nicht dein Restkontingent; verbindlich ist allein die Anzeige im Anbieter-Konto.
 
 ### Zwei Limit-Ebenen, die man auseinanderhalten muss
 
-- **5-Stunden-Fenster:** kurzfristige Drosselung. Kommt zurück, wenn man eine Weile nichts tut.
-- **Wochenlimit:** hartes Ende bis zum Reset-Datum. Ein zweiter Key aus einem anderen Konto hilft, ein anderes Modell im selben Konto nicht.
+- **Rollierendes 5-Stunden-Fenster:** kurzfristige Drosselung. Löst sich von selbst, wenn man eine Weile nichts tut.
+- **Rollierendes Wochenfenster:** hartes Ende bis zum Reset. Ein zweiter Key aus einem anderen Konto hilft, ein anderes Modell im selben Konto nicht.
+
+Beide Fenster rollen — sie setzen nicht zu einer festen Uhrzeit zurück, sondern lassen die ältesten Turns nach und nach herausfallen. Die Meldung nennt meist ein Reset-Datum; das ist der Zeitpunkt, ab dem wieder genug herausgefallen ist, keine Kalendergrenze.
 
 Wer eine Meldung als „nur Rate-Limit" abtut und weiter probiert, verbrennt beide Ebenen gleichzeitig.
 
@@ -110,9 +114,9 @@ Zwei Dinge, die man dabei wissen muss:
 
 ### Was Token-Verbrauch aufbläht
 
-Werden Skill-Pakete und Brücken-Komponenten in den Kontext jeder gerouteten Anfrage geschrieben, kann ein trivialer Testlauf („Antworte mit genau einem Wort: pong") sechsstellige Tokenzahlen erzeugen, wo vorher einstellige standen. Auf einem Flat-Plan mit Request-Zählung fällt das nicht auf. Auf einem Endpunkt mit Token-Abrechnung wäre es teuer.
+Werden Skill-Pakete und Brücken-Komponenten in den Kontext jeder gerouteten Anfrage geschrieben, kann ein trivialer Testlauf („Antworte mit genau einem Wort: pong") sechsstellige Tokenzahlen erzeugen, wo vorher einstellige standen. Auf einem Flat-Abo fällt das kaum auf. Auf einem Endpunkt mit Token-Abrechnung wäre es teuer.
 
-Merksatz: **Prüfe, welche Abrechnungsgröße dein Plan zählt, bevor du irgendetwas optimierst.**
+Merksatz: **Kläre, wie dein Plan abrechnet, bevor du irgendetwas optimierst.** Bei einem Flat-Abo optimierst du die Zahl der Turns, bei Token-Abrechnung die Größe des Kontexts. Wer das verwechselt, optimiert am Limit vorbei.
 
 ---
 

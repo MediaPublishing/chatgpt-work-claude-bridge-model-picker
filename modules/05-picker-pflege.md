@@ -69,10 +69,14 @@ node src/control.mjs picker status | tail -40
 Der Picker zeigt Modellnamen, aber nicht, was sie dich kosten. `tools/picker-usage-labels.mjs` schreibt eine kompakte Verbrauchsanzeige in die Beschreibung jedes gerouteten Modells:
 
 ```
-▰▰▰▱▱ 442 Req/7T · 178M Tok · 14 Fehler | <ursprüngliche Beschreibung>
+▰▰▰▱▱ lokal 442 Anfr./7T · 178M Tok · 14 Fehler | <ursprüngliche Beschreibung>
 ```
 
-Der Balken ist der **Anteil an allen gerouteten Requests der letzten 7 Tage**. Warum Requests und nicht Tokens: Bei einem Flat-Abo wie OpenCode Go zählen Requests gegen die Limits, Tokens nicht. Die Token-Zahl steht trotzdem daneben — sie ist relevant, sobald ein Endpunkt mit Token-Abrechnung im Spiel ist.
+**Was das ist und was nicht.** Die Zahlen stammen aus dem Ereignisprotokoll des Routers auf **diesem** Rechner: welche Modelle du zuletzt benutzt hast. Der Balken ist der Anteil eines Modells an allen hier gerouteten Anfragen der letzten 7 Tage.
+
+Es ist **kein Restkontingent**. Anfragen von anderen Geräten oder aus anderen Werkzeugen desselben Kontos tauchen nicht auf, und wie der Anbieter sein Limit intern zählt, ist nicht veröffentlicht. Verbindlich ist allein die Anzeige im Anbieter-Konto. Das Label beantwortet „was nutze ich eigentlich?", nicht „wie viel habe ich noch?".
+
+Die Token-Zahl steht daneben, weil sie zählt, sobald ein Endpunkt mit Token-Abrechnung im Spiel ist.
 
 Installieren und einmal laufen lassen:
 
@@ -101,8 +105,7 @@ Lege dir `$HOME/Library/LaunchAgents/local.picker-usage-labels.plist` an. **Der 
   <key>Label</key><string>local.picker-usage-labels</string>
   <key>ProgramArguments</key>
   <array>
-    <string>/usr/bin/env</string>
-    <string>node</string>
+    <string>REPLACE_NODE</string>
     <string>REPLACE_HOME/.local/bin/picker-usage-labels.mjs</string>
   </array>
   <key>StartCalendarInterval</key>
@@ -113,7 +116,27 @@ Lege dir `$HOME/Library/LaunchAgents/local.picker-usage-labels.plist` an. **Der 
 </plist>
 ```
 
-`REPLACE_HOME` durch den echten Wert von `$HOME` ersetzen (Plists verstehen keine Variablen). Dann:
+### Die zwei Platzhalter in jeder Plist-Vorlage
+
+Beide gelten für **alle** LaunchAgent-Vorlagen in diesem Modul:
+
+- **`REPLACE_HOME`** → der echte Wert von `$HOME`. Plists verstehen keine Variablen.
+- **`REPLACE_NODE`** → der **absolute** Pfad zu Node. `launchd` startet mit einem minimalen PATH und kennt weder Homebrew noch nvm noch `~/.local/bin` — ein `/usr/bin/env node` findet dort schlicht kein Node, und der Agent scheitert täglich still.
+
+Beides ermitteln:
+
+```bash
+echo "REPLACE_HOME = $HOME"
+echo "REPLACE_NODE = $(command -v node)"
+```
+
+Zeigt `command -v node` nichts, ist Node nicht im PATH — dann zuerst Modul 01. Nach dem Einsetzen einmal gegenprüfen, dass der Pfad wirklich existiert:
+
+```bash
+"$(command -v node)" --version
+```
+
+Dann:
 
 ```bash
 mkdir -p "$HOME/.local/state"
@@ -165,7 +188,7 @@ Manche Modelle liefert ein Anbieter dauerhaft kaputt aus (Formatwechsel, nonkonf
 
 ### Täglich automatisch (macOS)
 
-`$HOME/Library/LaunchAgents/local.model-sync.plist` — `REPLACE_HOME` ersetzen, **der Nutzer lädt selbst**:
+`$HOME/Library/LaunchAgents/local.model-sync.plist` — `REPLACE_HOME` und `REPLACE_NODE` ersetzen (siehe Teil B), **der Nutzer lädt selbst**:
 
 ```xml
 <?xml version="1.0" encoding="UTF-8"?>
@@ -176,8 +199,7 @@ Manche Modelle liefert ein Anbieter dauerhaft kaputt aus (Formatwechsel, nonkonf
   <key>Label</key><string>local.model-sync</string>
   <key>ProgramArguments</key>
   <array>
-    <string>/usr/bin/env</string>
-    <string>node</string>
+    <string>REPLACE_NODE</string>
     <string>REPLACE_HOME/.local/bin/model-sync.mjs</string>
   </array>
   <key>StartCalendarInterval</key>
@@ -256,7 +278,7 @@ Kontobezogene Freigaben (etwa ein Hosting-Region-Opt-in) gelten für den **Works
 
 `auto --if-limited` ist so gebaut, dass er im Normalfall **keine einzige Anbieter-Anfrage** stellt: Er schaut zuerst in die Cooldown-Datei des Routers und tut nur dann etwas, wenn dort ein aktives Kontingent-429 vermerkt ist. Ein Watchdog, der alle fünf Minuten Kontingent verbrennt, um Kontingent zu sparen, wäre absurd.
 
-Vorlage für `$HOME/Library/LaunchAgents/local.opencode-keys-watch.plist` (`REPLACE_HOME` ersetzen, **der Nutzer lädt selbst**):
+Vorlage für `$HOME/Library/LaunchAgents/local.opencode-keys-watch.plist` (`REPLACE_HOME` und `REPLACE_NODE` ersetzen (siehe Teil B), **der Nutzer lädt selbst**):
 
 ```xml
 <?xml version="1.0" encoding="UTF-8"?>
@@ -267,8 +289,7 @@ Vorlage für `$HOME/Library/LaunchAgents/local.opencode-keys-watch.plist` (`REPL
   <key>Label</key><string>local.opencode-keys-watch</string>
   <key>ProgramArguments</key>
   <array>
-    <string>/usr/bin/env</string>
-    <string>node</string>
+    <string>REPLACE_NODE</string>
     <string>REPLACE_HOME/.local/bin/opencode-keys.mjs</string>
     <string>auto</string>
     <string>--if-limited</string>

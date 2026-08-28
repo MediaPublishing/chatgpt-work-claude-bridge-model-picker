@@ -74,8 +74,12 @@ grep -rn 'pull_request_target' .github/ 2>/dev/null
 echo "(leer = kein Treffer)"
 
 echo "=== 7. Tests ==="
-npm ci --silent && npm test 2>&1 | tail -20
+npm ci --silent || echo "npm ci FEHLGESCHLAGEN (Exit $?)"
+npm test > /tmp/router-test.log 2>&1; echo "npm test Exit-Code: $?"
+tail -20 /tmp/router-test.log
 ```
+
+**Achte auf den Exit-Code, nicht auf die letzten Zeilen.** `npm test | tail` würde dir den Status von `tail` zeigen (immer 0) und einen Fehlschlag verstecken. Deshalb hier erst in eine Datei, dann Exit-Code lesen, dann anschauen. Dasselbe gilt für jeden anderen Befehl in diesem Modul: wenn du ihn durch eine Pipe schickst, prüfe den Exit-Code der **Quelle**, nicht den der Pipe.
 
 Zwei Dinge, die du dem Nutzer **vor** Prüfung 7 sagen musst:
 
@@ -209,7 +213,7 @@ Der Installer weist Eigentum über eine eigene Verwaltungsdatei nach und lässt 
 
 Wer einzelne dieser Skills nicht will, kann sie entfernen — muss dann aber drei Dinge wissen:
 
-- **Jeder `bin/install`-Lauf schreibt sie zurück.** Auch ein `curate-models … --apply` kann das auslösen, weil es die Katalogwege neu aufbaut.
+- **`bin/install` schreibt sie zurück** — also bei jeder Neuinstallation und jedem Router-Update. Eine normale Kuration (`curate-models`) tut das **nicht**; beim gepinnten Stand ruft nur `bin/install` (und `bin/skills`) die Skill-Installation auf. Aufpassen muss man trotzdem: `curate-models --no-apply` schlägt am Ende selbst `./bin/install` vor — wer dem folgt, holt die Skills zurück.
 - **`./bin/doctor` meldet sie dauerhaft als `FAIL: Codex skill pack: missing`** und schlägt `./bin/install` vor. Wer dem Vorschlag folgt, holt sie zurück.
 - Das ist alles **kosmetisch**. Es beschädigt nichts, und es ist kein Grund, den Router für kaputt zu halten.
 
@@ -233,6 +237,16 @@ cd /tmp && "$CODEX_BIN" exec -m <provider>/<modell> --skip-git-repo-check \
 ```
 
 Gültige Slugs zeigt `"$CODEX_BIN" debug models`. Ist noch kein Provider aktiv, ist nur Test (a) fällig; (b) holst du am Ende von Modul 04 nach — dann aber wirklich.
+
+**Beide Bedingungen prüfen, nicht nur eine.** Ein Testlauf ist erst bestanden, wenn der Exit-Code 0 ist **und** die Ausgabe `pong` enthält. Ein Exit-Code 0 mit leerer Ausgabe ist ein Fehlschlag:
+
+```bash
+cd /tmp && "$CODEX_BIN" exec -m <modell> --skip-git-repo-check \
+  "Antworte mit genau einem Wort: pong" > /tmp/pong.log 2>&1
+code=$?
+echo "Exit: $code"; cat /tmp/pong.log
+if [ "$code" -eq 0 ] && grep -qi pong /tmp/pong.log; then echo "BESTANDEN"; else echo "FEHLGESCHLAGEN"; fi
+```
 
 Zum Schluss den Nutzer bitten, die App **komplett zu beenden** und neu zu öffnen, und im Picker nachzusehen.
 

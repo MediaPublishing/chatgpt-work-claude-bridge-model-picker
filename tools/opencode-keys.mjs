@@ -41,7 +41,11 @@ const RATE_LIMITS = path.join(ROUTER_STATE, "rate-limits.json");
 const ROUTER_SECRET = path.join(ROUTER_STATE, "opencode-go-api-key.secret");
 
 const VAR = "OPENCODE_API_KEY";
+// Fest verdrahtet, absichtlich nicht per Umgebungsvariable umbiegbar: hier
+// geht ein Key ueber die Leitung. Eine manipulierte Env duerfte ihn niemals an
+// einen fremden Host schicken koennen.
 const GO = "https://opencode.ai/zen/go/v1";
+const PROBE_TIMEOUT_MS = 15000;
 // Kontingent-Probe ueber die Messages-Route. Wichtig: /messages am Go-Endpunkt
 // verlangt den Header x-api-key, NICHT Authorization: Bearer.
 const PROBE_MODEL = process.env.OPENCODE_PROBE_MODEL || "minimax-m3";
@@ -140,12 +144,17 @@ function acceptedFromProbe(probe) {
 
 // Kontingent-Probe: winziger Request.
 // 200 = frei, 429 = Kontingent/Wochenlimit, 401/403 = Key- oder Freigabeproblem.
+// Alles andere (Zeitueberschreitung, 5xx, DNS) ist ein FEHLER und gilt nie als
+// angenommen -- geschrieben wird dann nichts.
 async function probeQuota(key) {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), PROBE_TIMEOUT_MS);
   try {
     const r = await fetch(`${GO}/messages`, {
       method: "POST",
       headers: { "x-api-key": key, "anthropic-version": "2023-06-01", "Content-Type": "application/json" },
       body: JSON.stringify({ model: PROBE_MODEL, max_tokens: 16, messages: [{ role: "user", content: "pong" }] }),
+      signal: controller.signal,
     });
     if (r.ok) return { state: "OK", detail: "Kontingent frei" };
     // Der Key darf niemals in einer Fehlermeldung landen.
@@ -160,7 +169,10 @@ async function probeQuota(key) {
     if (r.status === 429) return { state: "LIMIT", detail: msg };
     return { state: `HTTP ${r.status}`, detail: msg };
   } catch (e) {
-    return { state: "FEHLER", detail: e.message };
+    const why = e.name === "AbortError" ? `Zeitueberschreitung nach ${PROBE_TIMEOUT_MS} ms` : e.message;
+    return { state: "FEHLER", detail: String(why) };
+  } finally {
+    clearTimeout(timer);
   }
 }
 

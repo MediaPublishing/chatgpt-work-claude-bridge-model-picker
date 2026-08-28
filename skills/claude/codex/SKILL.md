@@ -54,7 +54,7 @@ Nutze diesen Skill nur bei ausdrücklichem `/codex` oder einer klaren Bitte, Cod
 
 ## Grenzen
 
-- **Reine Frage-Antwort-Delegation.** Codex übernimmt nicht diesen Thread und ändert keine Dateien im Projekt.
+- **Frage-Antwort-Delegation.** Codex bekommt nur den Prompt und startet in einem neutralen Arbeitsverzeichnis, nicht im Projekt. Das ist Sorgfalt, keine erzwungene Isolation: Das CLI läuft mit den Rechten des Nutzers, kein Flag sperrt es technisch aus dem Dateisystem aus. Für harte Grenzen die Sandbox der App nutzen, nicht die Brücke.
 - Willst du echte Datei-Arbeit von Codex, ist dieser Skill das falsche Werkzeug — dann die Codex-App direkt öffnen.
 - Nur der Abo-Weg. Kein Ausweichen auf API-Keys.
 

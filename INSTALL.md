@@ -58,7 +58,10 @@ Reihenfolge und Zuordnung (jedes Modul ist eigenständig; überspringe, was laut
 | `modules/02-bruecke.md` | A oder C | Slash-Command-Skills aus `skills/` in die vorhandenen Apps kopieren und anpassen |
 | `modules/03-router.md` | B oder C | codex-router installieren: gepinnter Commit, Prüfbefunde, `patches/` anwenden, Dienst einrichten |
 | `modules/04-provider.md` | B oder C | OpenCode- und/oder OpenRouter-Provider anbinden, Keys aus Nutzer-Dateien, Modelle kuratieren |
-| `modules/05-picker-pflege.md` | B oder C | Picker aufräumen (SOTA + gratis), Verbrauchslabels, Key-Rotation + Watchdog aus `tools/` |
+| `modules/05-picker-pflege.md` | B oder C | Picker aufräumen (SOTA + gratis), Verbrauchslabels, **Modell-Sync**, Key-Rotation + Watchdog aus `tools/` |
+| `modules/06-handoff.md` | A oder C | `/handoff`: langen Chat verdichten und an ein neues Gespräch übergeben |
+
+**Modul 06 auch bei B anbieten.** Es gehört formal zum Brücken-Pfad, ist aber unabhängig davon nützlich — gerade wer den Picker hat, braucht es: Ein Modellwechsel mitten im Gespräch scheitert an der Verdichtungsfalle, und `/handoff` ist der saubere Ausweg. Bei Interview-Antwort B fragst du den Nutzer, ob er es trotzdem will, statt es stillschweigend zu überspringen.
 
 ## Schritt 3 — Abnahme
 
@@ -98,7 +101,8 @@ Diese Punkte gehören hinein — sammle sie mechanisch, rate nichts:
     "02-bruecke": { "status": "…" },
     "03-router": { "status": "…", "pinnedCommit": "…" },
     "04-provider": { "status": "…" },
-    "05-picker-pflege": { "status": "…" }
+    "05-picker-pflege": { "status": "…" },
+    "06-handoff": { "status": "…" }
   },
   "notes": ["freier Text für Übergaben zwischen Agenten/Modellen"]
 }

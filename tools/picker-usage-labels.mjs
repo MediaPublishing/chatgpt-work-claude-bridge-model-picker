@@ -2,12 +2,17 @@
 // Schreibt Verbrauchs-Anhaltspunkte in die Modellbeschreibungen des Codex-Pickers.
 //
 // Patcht merged-models.json (nur die description der GEROUTETEN, gelisteten Modelle):
-//   ▰▰▰▱▱ 442 Req/7T · 178M Tok · 14 Fehler | <urspruengliche Beschreibung>
+//   ▰▰▰▱▱ lokal 442 Anfr./7T · 178M Tok · 14 Fehler | <urspruengliche Beschreibung>
 //
-// Der Balken ist der Anteil an allen gerouteten Requests der letzten 7 Tage.
-// Bei einem Flat-Abo zaehlen Requests gegen die Limits, nicht Tokens — deshalb
-// ist das die relevante Groesse. Die Token-Zahl steht trotzdem daneben, weil sie
-// zaehlt, sobald ein Endpunkt mit Token-Abrechnung im Spiel ist.
+// WAS DAS IST: die lokal beobachtete Aktivitaet dieses Rechners aus dem
+// Ereignisprotokoll des Routers — welche Modelle DU zuletzt benutzt hast.
+//
+// WAS DAS NICHT IST: dein Restkontingent beim Anbieter. Der Balken ist der
+// Anteil eines Modells an allen hier gerouteten Anfragen der letzten 7 Tage,
+// kein Anteil an irgendeinem Limit. Anfragen ueber andere Geraete, andere
+// Werkzeuge oder dasselbe Konto anderswo tauchen hier nicht auf, und wie der
+// Anbieter sein Limit intern zaehlt, ist nicht veroeffentlicht. Verbindlich ist
+// allein die Anzeige im Anbieter-Konto.
 //
 // Manuell:  node picker-usage-labels.mjs   (danach Codex komplett neu starten)
 //
@@ -89,16 +94,17 @@ let patched = 0;
 for (const m of routed) {
   const u = byModel.get(m.slug);
   // Ein bereits vorhandenes Label zuerst abschneiden, damit sich nichts stapelt.
-  const base = (m.description || "").replace(/^▰*▱* [^·]+ · [^·]+ Tok[^|]*\| ?/, "");
+  // Die aeltere Schreibweise ohne "lokal" wird bewusst mit erfasst.
+  const base = (m.description || "").replace(/^▰*▱* (lokal )?[^·]+ · [^·]+ Tok[^|]*\| ?/, "");
   if (!u) {
-    m.description = `▱▱▱▱▱ 0 Req/${DAYS}T · 0 Tok | ${base}`.trim();
+    m.description = `▱▱▱▱▱ lokal 0 Anfr./${DAYS}T · 0 Tok | ${base}`.trim();
     patched += 1;
     continue;
   }
   const filled = Math.max(u.req > 0 ? 1 : 0, Math.round((u.req / maxReq) * 5));
   const bar = "▰".repeat(filled) + "▱".repeat(5 - filled);
   const err = u.err ? ` · ${u.err} Fehler` : "";
-  m.description = `${bar} ${u.req} Req/${DAYS}T · ${fmt(u.tok)} Tok${err} | ${base}`.trim();
+  m.description = `${bar} lokal ${u.req} Anfr./${DAYS}T · ${fmt(u.tok)} Tok${err} | ${base}`.trim();
   patched += 1;
 }
 

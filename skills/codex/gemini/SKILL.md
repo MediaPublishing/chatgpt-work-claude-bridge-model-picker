@@ -43,7 +43,7 @@ Gut geeignet dafür: Fragen, bei denen aktuelle Websuche hilft — das CLI kann 
 
 ## Grenzen
 
-- **Reine Frage-Antwort-Delegation.** Gemini schreibt keine Dateien im Projekt des Nutzers; das Arbeitsverzeichnis ist bewusst neutral.
+- **Frage-Antwort-Delegation.** Gemini bekommt nur den Prompt; das Arbeitsverzeichnis ist bewusst neutral, nicht das Projekt. Das ist Sorgfalt, keine erzwungene Isolation: Das CLI läuft mit den Rechten des Nutzers. Für harte Grenzen die Sandbox der App nutzen, nicht die Brücke.
 - **Nicht für Bilder.** Bildgenerierung läuft nicht über das Abo-CLI, sondern über einen separaten Gemini-API-Key. Dafür einen eigenen Bild-Skill nutzen, nicht diesen hier.
 - Keine Auth-Umgebungsvariablen setzen. Der OAuth-Weg nutzt das Abo; ein API-Key würde stattdessen abrechnen.
 

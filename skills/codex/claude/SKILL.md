@@ -47,7 +47,7 @@ Nutze diesen Skill nur bei ausdrücklichem `/claude` oder einer klaren Bitte, Cl
 
 ## Grenzen
 
-- **Reine Frage-Antwort-Delegation.** Claude übernimmt nicht diesen Thread, liest nicht das Projekt und schreibt keine Dateien. Deshalb das neutrale Arbeitsverzeichnis.
+- **Frage-Antwort-Delegation.** Claude bekommt nur den Prompt und startet in einem neutralen Arbeitsverzeichnis, nicht im Projekt. Das ist Sorgfalt, keine erzwungene Isolation: Das CLI läuft mit den Rechten des Nutzers, kein Flag sperrt es technisch aus dem Dateisystem aus. Für harte Grenzen die Sandbox der App nutzen, nicht die Brücke.
 - Willst du echte Datei-Arbeit von Claude, ist dieser Skill das falsche Werkzeug — dann Claude Code direkt öffnen.
 - Nur der Abo-Weg. Kein Ausweichen auf API-Keys oder andere Abrechnungspfade, wenn der Login fehlt.
 - Die Verantwortung für lokale Änderungen, externe Aktionen und Freigaben bleibt hier. Claude liefert Text.
