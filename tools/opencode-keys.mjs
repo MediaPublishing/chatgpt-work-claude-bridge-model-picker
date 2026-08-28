@@ -42,7 +42,6 @@ const ROUTER_SECRET = path.join(ROUTER_STATE, "opencode-go-api-key.secret");
 
 const VAR = "OPENCODE_API_KEY";
 const GO = "https://opencode.ai/zen/go/v1";
-const ZEN = "https://opencode.ai/zen/v1";
 // Kontingent-Probe ueber die Messages-Route. Wichtig: /messages am Go-Endpunkt
 // verlangt den Header x-api-key, NICHT Authorization: Bearer.
 const PROBE_MODEL = process.env.OPENCODE_PROBE_MODEL || "minimax-m3";
@@ -125,13 +124,18 @@ function readClipboardKey() {
   return key;
 }
 
-// Ein Key gilt als gueltig, wenn /models auf beiden Endpunkten 200 liefert.
-async function keyAccepted(key) {
-  for (const base of [GO, ZEN]) {
-    const r = await fetch(`${base}/models`, { headers: { Authorization: `Bearer ${key}` } });
-    if (!r.ok) return { ok: false, where: base.replace("https://opencode.ai", ""), status: r.status };
-  }
-  return { ok: true };
+// Ein Key gilt als gueltig, wenn ein AUTHENTIFIZIERTER Endpunkt ihn annimmt.
+//
+// Wichtig: /models pruefen reicht NICHT. Der Endpunkt antwortet auf jeden
+// beliebigen Bearer-Wert mit 200 (nachgemessen), ein Tippfehler kaeme also
+// durch und wuerde einen funktionierenden Key ueberschreiben. Nur /messages
+// authentifiziert wirklich -- und verlangt dort x-api-key statt Bearer.
+//
+// 429 bedeutet: Key gueltig, Kontingent erschoepft. Das ist ein akzeptierter
+// Key, kein abgelehnter.
+function acceptedFromProbe(probe) {
+  if (probe.state === "OK" || probe.state === "LIMIT") return { ok: true };
+  return { ok: false, status: probe.state, detail: probe.detail };
 }
 
 // Kontingent-Probe: winziger Request.
@@ -236,12 +240,14 @@ switch (command) {
     for (const s of listSlots()) {
       if (parseEnv(slotPath(s)) === key) die(`Dieser Key ist bereits als Slot '${s}' gespeichert.`);
     }
-    const test = await keyAccepted(key);
-    if (!test.ok) die(`Test ${test.where}: HTTP ${test.status}. Key abgelehnt, NICHTS geschrieben.`);
-    console.log("Test gegen beide Endpunkte: HTTP 200");
+    // Erst pruefen, dann schreiben. Ein abgelehnter Key darf nie einen
+    // funktionierenden ueberschreiben.
+    const quota = await probeQuota(key);
+    const test = acceptedFromProbe(quota);
+    if (!test.ok) die(`Test am Anbieter: ${test.status} ${test.detail}. Key abgelehnt, NICHTS geschrieben.`);
+    console.log(`Test am Anbieter: angenommen (${quota.state}).`);
     writeEnv(slotPath(slot), key);
     console.log(`Gespeichert: ${slotPath(slot)} (0600)`);
-    const quota = await probeQuota(key);
     console.log(`Kontingent: ${quota.state} ${quota.detail}`);
     if (flags.has("--use")) await activate(slot);
     else console.log(`Aktivieren mit: node ${process.argv[1]} use ${slot}`);

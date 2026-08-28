@@ -1,11 +1,12 @@
 # Bridge & Picker
 
-> **English TL;DR** — This repo upgrades your AI desktop apps with each other, using the subscriptions you already pay for: call Claude from ChatGPT Work via `/claude` (and vice versa), and pull extra models like DeepSeek, GLM, MiniMax, Qwen and Grok straight into the ChatGPT Work model picker. To install, hand the one-line instruction below to your AI agent — it does the rest. The playbook is written in German, but your agent will talk to you in your own language.
+> **English TL;DR** — This repo upgrades your AI desktop apps with each other, using the subscriptions you already pay for: call Claude from ChatGPT Work via `/claude` (and vice versa), and pull extra models like DeepSeek, GLM, MiniMax, Qwen and Grok straight into the ChatGPT Work model picker — kept current by a daily model sync. To install, hand the one-line instruction below to your AI agent — it does the rest. The playbook is written in German, but your agent will talk to you in your own language.
 
 Rüste deine AI-Desktop-Apps gegenseitig auf — mit deinen bestehenden Abos, ohne teure Einzel-APIs:
 
 - **Die Brücke:** Rufe aus ChatGPT Work/Codex per `/claude` dein Claude-Abo auf (und umgekehrt per `/codex` dein ChatGPT-Abo aus Claude Cowork/Code). Auch `/gemini` fürs Google-Abo.
 - **Der Picker:** Hole zusätzliche Modelle (DeepSeek, GLM, MiniMax, Qwen, Grok u. a.) direkt in die Modellauswahl von ChatGPT Work/Codex — über eine OpenCode-Go-Subscription und optional kostenlose OpenRouter-Modelle.
+- **Und er bleibt aktuell:** Ein täglicher Modell-Sync nimmt neue Modelle auf und wirft abgeschaltete raus, damit die Auswahl nicht auf dem Stand des Installationstags einfriert.
 
 ![Modellauswahl in ChatGPT Work mit nativen GPT-Modellen und zusätzlich gerouteten Fremdmodellen (GLM, DeepSeek, MiniMax, Qwen, Grok) sowie einem /claude-Aufruf im Eingabefeld](docs/picker-screenshot.png)
 
@@ -49,7 +50,7 @@ OpenCode Go ist die primäre Empfehlung für den Picker: ein Flat-Abo statt Toke
 | `INSTALL.md` | Das Playbook für deinen Agenten — Interview, Module, Verifikation |
 | `modules/` | Ein eigenständiges Playbook pro Baustein |
 | `skills/` | Die Slash-Command-Vorlagen für beide Apps |
-| `tools/` | Hilfsskripte (Key-Verwaltung, Verbrauchsanzeige im Picker) |
+| `tools/` | Hilfsskripte: täglicher Modell-Sync, Key-Verwaltung, Verbrauchsanzeige im Picker |
 | `patches/` | Geprüfte Fixes gegen den gepinnten codex-router-Stand |
 | `LEARNINGS.md` | Die wichtigsten Erkenntnisse und Fehlerbilder aus der Praxis |
 

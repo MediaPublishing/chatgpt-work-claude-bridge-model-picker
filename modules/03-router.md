@@ -205,7 +205,15 @@ Sag dem Nutzer, dass das passiert, und liste ihm auf, was neu dazugekommen ist:
 ls -la "$HOME/.codex/skills"
 ```
 
-Der Installer weist Eigentum über eine eigene Verwaltungsdatei nach und lässt Symlinks, unbekannte Dateien und fremde Verzeichnisse unangetastet. Wer einzelne dieser Skills nicht will, kann sie entfernen — muss dann aber wissen, dass **jeder Router-Lauf sie zurückschreibt** und `./bin/doctor` sie dauerhaft als fehlend meldet. Das ist kosmetisch.
+Der Installer weist Eigentum über eine eigene Verwaltungsdatei nach und lässt Symlinks, unbekannte Dateien und fremde Verzeichnisse unangetastet.
+
+Wer einzelne dieser Skills nicht will, kann sie entfernen — muss dann aber drei Dinge wissen:
+
+- **Jeder `bin/install`-Lauf schreibt sie zurück.** Auch ein `curate-models … --apply` kann das auslösen, weil es die Katalogwege neu aufbaut.
+- **`./bin/doctor` meldet sie dauerhaft als `FAIL: Codex skill pack: missing`** und schlägt `./bin/install` vor. Wer dem Vorschlag folgt, holt sie zurück.
+- Das ist alles **kosmetisch**. Es beschädigt nichts, und es ist kein Grund, den Router für kaputt zu halten.
+
+Sag dem Nutzer das, statt ihn später über den `doctor`-Fehler stolpern zu lassen.
 
 ## Schritt 8 — Verifikation in beide Richtungen (der Beleg)
 

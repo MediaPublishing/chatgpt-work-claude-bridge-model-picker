@@ -1,10 +1,10 @@
 # Modul 05 — Picker pflegen: kuratieren, beschriften, Keys rotieren
 
 **Wann:** bei Interview-Antwort B oder C, nach Modul 04.
-**Ziel:** Der Picker zeigt eine überschaubare, aktuelle Auswahl; du siehst pro Modell, wie viel du verbrauchst; und bei erschöpftem Kontingent schaltet ein Watchdog auf einen freien Key um.
+**Ziel:** Der Picker zeigt eine überschaubare, aktuelle Auswahl; er bleibt von selbst aktuell; du siehst pro Modell, wie viel du verbrauchst; und bei erschöpftem Kontingent schaltet ein Watchdog auf einen freien Key um.
 **Beleg am Ende:** Picker-Readback nach dem Aufräumen, sichtbare Verbrauchslabels, `status`-Ausgabe der Key-Slots.
 
-Alles hier ist **optional und einzeln nutzbar**. Wer nur einen Key hat, überspringt Teil C.
+Alles hier ist **optional und einzeln nutzbar**. Wer nur einen Key hat, überspringt Teil D. Teil C (Modell-Sync) ist der Teil, den du am ehesten *nicht* auslassen solltest — ohne ihn veraltet die Auswahl still vor sich hin.
 
 **Variablen zuerst setzen.** Dieses Modul benutzt `$REPO` und `$ROUTER_DIR`. Steigst du hier ein, setz sie neu — ein leeres `$REPO` macht aus `cp "$REPO/tools/…"` einen Zugriff auf `/tools/…`:
 
@@ -125,7 +125,88 @@ Entladen: `launchctl bootout gui/$(id -u)/local.picker-usage-labels`
 
 Auf Linux stattdessen ein `cron`-Eintrag oder ein systemd-User-Timer.
 
-## Teil C — Mehrere Keys und der Kontingent-Watchdog
+## Teil C — Picker aktuell halten (Modell-Sync)
+
+Ohne diesen Schritt **versteinert der Picker**. Der Anbieter bringt laufend neue Modelle und schaltet alte ab; deine Auswahl bleibt auf dem Stand des Installationstags stehen — neue Modelle fehlen, abgeschaltete stehen als tote Slugs herum und antworten mit `429`.
+
+`tools/model-sync.mjs` gleicht das täglich ab:
+
+- fragt den Anbieter-Katalog ab,
+- nimmt pro Produktlinie **nur die aktuelle Generation** auf (`glm-5` fliegt raus, sobald `glm-5.2` da ist),
+- überspringt `-preview`/`-beta`/`-alpha`/`-legacy`/`-deprecated` und geroutete Kopien nativer Modelle,
+- entfernt selbst ergänzte Einträge, die es beim Anbieter nicht mehr gibt,
+- baut Katalog und Gateway-Konfiguration neu, schreibt die Verbrauchslabels nach und startet den Dienst.
+
+Geschrieben wird ausschließlich nach `$HOME/.codex/codex-router/user-models.json`. Das liegt **außerhalb** des Checkouts — ein Router-Update wirft es nicht weg, und die kuratierte Liste des Projekts wird nie angefasst.
+
+### Immer zuerst der Trockenlauf
+
+```bash
+node "$REPO/tools/model-sync.mjs" --dry-run
+```
+
+Der zeigt genau, was aufgenommen und was entfernt würde, und schreibt nichts. Erst wenn das plausibel aussieht:
+
+```bash
+install -m 755 -d "$HOME/.local/bin"
+cp "$REPO/tools/model-sync.mjs" "$HOME/.local/bin/model-sync.mjs"
+node "$HOME/.local/bin/model-sync.mjs"
+```
+
+Damit die Verbrauchslabels aus Teil B mitlaufen, muss `picker-usage-labels.mjs` daneben liegen — entweder im selben Verzeichnis oder unter `$HOME/.local/bin/`. Das Skript sagt im Log, wenn es sie nicht findet.
+
+### Die Abbruchsicherungen
+
+Das Skript ändert **nichts**, wenn der Anbieter einen Fehler liefert oder null Modelle meldet. Ein leerer Katalog ist fast immer eine Störung — und ohne diese Sicherung würde ein Anbieter-Schluckauf deine halbe Modellauswahl löschen. Beide Fälle landen im Log.
+
+### Die Denyliste
+
+Manche Modelle liefert ein Anbieter dauerhaft kaputt aus (Formatwechsel, nonkonformer Stream). Nimmst du sie aus dem Picker, holt der nächste Sync sie brav wieder — sie stehen ja im Anbieter-Katalog. Dafür gibt es im Skript die `DENYLIST`. Voreingestellt steht dort `kimi-k3`, passend zu `patches/0001`. Wer ein Modell dauerhaft nicht will, trägt es dort ein.
+
+### Täglich automatisch (macOS)
+
+`$HOME/Library/LaunchAgents/local.model-sync.plist` — `REPLACE_HOME` ersetzen, **der Nutzer lädt selbst**:
+
+```xml
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN"
+  "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+  <key>Label</key><string>local.model-sync</string>
+  <key>ProgramArguments</key>
+  <array>
+    <string>/usr/bin/env</string>
+    <string>node</string>
+    <string>REPLACE_HOME/.local/bin/model-sync.mjs</string>
+  </array>
+  <key>StartCalendarInterval</key>
+  <dict><key>Hour</key><integer>7</integer><key>Minute</key><integer>0</integer></dict>
+  <key>StandardOutPath</key><string>REPLACE_HOME/.config/bridge-picker/model-sync.out.log</string>
+  <key>StandardErrorPath</key><string>REPLACE_HOME/.config/bridge-picker/model-sync.err.log</string>
+</dict>
+</plist>
+```
+
+```bash
+mkdir -p "$HOME/.config/bridge-picker"
+launchctl bootstrap gui/$(id -u) "$HOME/Library/LaunchAgents/local.model-sync.plist"
+launchctl list | grep model-sync
+tail -20 "$HOME/.config/bridge-picker/model-sync.log"
+```
+
+Entladen: `launchctl bootout gui/$(id -u)/local.model-sync`
+
+Auf Linux stattdessen ein `cron`-Eintrag oder ein systemd-User-Timer. Läuft der Sync um 07:00, sollten die Verbrauchslabels aus Teil B **danach** laufen — oder gar nicht extra, weil der Sync sie selbst nachzieht.
+
+### Grenzen, ehrlich benannt
+
+- **Neu aufgenommene Modelle laufen mit dem Standardprofil**: Kontextfenster 131072, nur Text. Hat ein Modell in Wirklichkeit ein 1M-Fenster, brichst du bei ~110k ab (siehe Kontextfenster-Falle in `modules/04-provider.md`). Das muss von Hand nachgezogen werden — der Lauf weist darauf hin, wenn er etwas Neues aufgenommen hat.
+- **Codex muss nach jedem Lauf mit Änderungen neu gestartet werden.** Der Sync kann das nicht.
+- **Der Sync kennt keine Qualität.** Er kennt Versionsnummern. Was neu und schlecht ist, kommt trotzdem rein — gelegentlich selbst aussortieren mit `node src/control.mjs picker set <provider>/<modell> hide`.
+- **Er pflegt nur `opencode-go`.** OpenRouter-Free-Modelle bleiben Handarbeit.
+
+## Teil D — Mehrere Keys und der Kontingent-Watchdog
 
 Wer zwei OpenCode-Keys hat (etwa aus zwei Konten), kann bei erschöpftem Wochenlimit umschalten, statt zu warten. `tools/opencode-keys.mjs` verwaltet die Keys als **Slots**.
 
@@ -164,6 +245,8 @@ Nach jedem Wechsel: **Codex komplett beenden und neu öffnen.**
 ### Was `add` schützt
 
 Das Skript testet den Key **bevor** es schreibt. Ein abgelehnter Key überschreibt also nie einen funktionierenden. Es weigert sich außerdem, denselben Key zweimal als verschiedene Slots abzulegen — das gäbe eine Rotation, die nichts rotiert.
+
+Der Test geht bewusst an einen **authentifizierten** Endpunkt (`/messages`). Das ist kein Detail: `/models` beim selben Anbieter antwortet auf jeden beliebigen Wert mit `200` — ein Tippfehler im Key käme dort anstandslos durch. Ein `429` im Test gilt als angenommen: Der Key ist gültig, nur das Kontingent ist erschöpft.
 
 ### Fallstrick: Freigaben hängen am Konto des Keys
 
@@ -216,9 +299,10 @@ Entladen: `launchctl bootout gui/$(id -u)/local.opencode-keys-watch`
 
 ```bash
 cd "$ROUTER_DIR" && node src/control.mjs picker status | tail -30
+node "$HOME/.local/bin/model-sync.mjs" --dry-run     # muss ohne Abbruch durchlaufen
 node "$HOME/.local/bin/picker-usage-labels.mjs"
-node "$HOME/.local/bin/opencode-keys.mjs" status    # nur bei mehreren Slots
-launchctl list | grep -E 'picker-usage-labels|opencode-keys-watch'
+node "$HOME/.local/bin/opencode-keys.mjs" status     # nur bei mehreren Slots
+launchctl list | grep -E 'model-sync|picker-usage-labels|opencode-keys-watch'
 ```
 
 Dann den Nutzer bitten: App neu starten, Picker öffnen, bestätigen, dass die Auswahl stimmt und die Verbrauchsbalken zu sehen sind.
@@ -230,13 +314,17 @@ Dann den Nutzer bitten: App neu starten, Picker öffnen, bestätigen, dass die A
 cd "$ROUTER_DIR" && node src/control.mjs picker all show
 
 # LaunchAgents entladen und entfernen
+launchctl bootout gui/$(id -u)/local.model-sync 2>/dev/null || true
 launchctl bootout gui/$(id -u)/local.picker-usage-labels 2>/dev/null || true
 launchctl bootout gui/$(id -u)/local.opencode-keys-watch 2>/dev/null || true
-rm -f "$HOME/Library/LaunchAgents/local.picker-usage-labels.plist" \
+rm -f "$HOME/Library/LaunchAgents/local.model-sync.plist" \
+      "$HOME/Library/LaunchAgents/local.picker-usage-labels.plist" \
       "$HOME/Library/LaunchAgents/local.opencode-keys-watch.plist"
 
 # Skripte entfernen
-rm -f "$HOME/.local/bin/picker-usage-labels.mjs" "$HOME/.local/bin/opencode-keys.mjs"
+rm -f "$HOME/.local/bin/model-sync.mjs" \
+      "$HOME/.local/bin/picker-usage-labels.mjs" \
+      "$HOME/.local/bin/opencode-keys.mjs"
 
 # Key-Slots (Rückfrage beim Nutzer! Das sind seine Keys)
 # rm -rf "$HOME/.config/bridge-picker/opencode-keys"
@@ -252,8 +340,9 @@ Die Verbrauchslabels verschwinden beim nächsten Katalog-Neubau von selbst; erzw
 { "status": "done",
   "visibleModels": 0,
   "labels": true,
+  "modelSync": "manuell | launchagent | nein",
   "keySlots": ["haupt"],
   "watchdog": false,
-  "receipt": "picker status Readback + Labels im Picker sichtbar",
+  "receipt": "picker status Readback + Labels im Picker sichtbar + model-sync Trockenlauf ohne Abbruch",
   "at": "ISO-Datum" }
 ```

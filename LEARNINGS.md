@@ -19,6 +19,7 @@ Für den installierenden Agenten: Schlag hier nach, bevor du einen Fehler wieder
 | `401 Insufficient balance` | Kein Guthaben | Du bist auf einem Endpunkt mit **Token-Abrechnung** gelandet statt auf dem Flat-Endpunkt. Endpunkt prüfen, nicht Guthaben nachladen |
 | `500` / `Endpoint is unavailable` | Server kaputt | Anbieterseitige Störung. Lokal ist nichts falsch. Abwarten |
 | `stream disconnected before completion: … 127.0.0.1` | Verbindung abgebrochen | Der lokale Router-Dienst **läuft nicht**. Kein Listener auf dem Port |
+| `409 Provider … is hidden` | Provider gesperrt | Du hast den Provider selbst ausgeblendet (`providers disable`), das Gespräch läuft aber noch auf einem seiner Modelle. Neues Gespräch mit einem anderen Modell — siehe Abschnitt 4 |
 | `gateway exited before becoming healthy` (Schleife) | Gateway startet nicht | Die **.env-Falle**, siehe unten |
 | `unsupported scheme '<missing scheme>'` | Ungültige URL | In der abschattenden `.env` steht ein **leeres** `DATABASE_URL=`. Ein leerer Wert gilt als gesetzt |
 | `failed to parse model_catalog_json` | Katalog kaputt | Zu **altes CLI aus dem PATH** gegen einen neueren Katalog. Das App-Binary nutzen |
@@ -88,6 +89,25 @@ Praktisch heißt das:
 
 Wer eine Meldung als „nur Rate-Limit" abtut und weiter probiert, verbrennt beide Ebenen gleichzeitig.
 
+### Wochenlimit erreicht — was jetzt wirklich hilft
+
+Der Fehler ist unspektakulär, die richtige Reaktion aber nicht offensichtlich. Der Reihe nach:
+
+1. **Zweiter Key?** Dann umschalten: `opencode-keys.mjs auto`. Das ist der einzige Weg, der sofort wieder Kapazität bringt.
+2. **Kein zweiter Key?** Dann den Provider **vorübergehend ausblenden**, statt tagelang gegen `429` zu laufen:
+
+   ```bash
+   cd "$ROUTER_DIR" && ./bin/providers disable opencode-go
+   ```
+
+   Der Picker zeigt danach nur noch die nativen Modelle, der Dienst läuft weiter, die Codex-Konfiguration bleibt unverändert. Du arbeitest normal über dein ChatGPT-Abo weiter, statt in jedem zweiten Thread über einen toten Fremdanbieter zu stolpern.
+3. **Nach dem Reset zurückholen:** `./bin/providers enable opencode-go`, dann Codex komplett beenden und neu öffnen.
+
+Zwei Dinge, die man dabei wissen muss:
+
+- **Ein ausgeblendeter Provider erzeugt einen eigenen Fehler.** Läuft ein Gespräch noch auf einem seiner Modelle, meldet der Router `409 Provider opencode-go is hidden`. Das ist kein Defekt — es ist die Ansage, dass dieses Gespräch ein anderes Modell braucht. Und weil ein Modellwechsel mitten im Gespräch an der Verdichtungslücke scheitert (Abschnitt 3), heißt das: **neues Gespräch** mit einem nativen Modell.
+- **Der Modell-Sync macht das nicht rückgängig.** Er filtert nach den aktivierten Providern; ein ausgeblendeter bleibt ausgeblendet, bis du ihn selbst zurückholst.
+
 ### Was Token-Verbrauch aufbläht
 
 Werden Skill-Pakete und Brücken-Komponenten in den Kontext jeder gerouteten Anfrage geschrieben, kann ein trivialer Testlauf („Antworte mit genau einem Wort: pong") sechsstellige Tokenzahlen erzeugen, wo vorher einstellige standen. Auf einem Flat-Plan mit Request-Zählung fällt das nicht auf. Auf einem Endpunkt mit Token-Abrechnung wäre es teuer.
@@ -151,6 +171,8 @@ Das gilt besonders für Fremdmodelle: `providers enable` meldet Erfolg, lange be
 - **Modelle verschwinden ohne Vorwarnung.** Zeitlich begrenzte Gratis-Aktionen enden; der Anbieter antwortet danach mit `401 … not supported`, und Codex zeigt das als `429`. Betroffene Threads brauchen ein neues Gespräch mit einem anderen Modell.
 - **Native Modelle lassen sich router-seitig nicht verstecken.** Der Router darf den client-eigenen Katalog nicht überschreiben. Kein Umweg suchen — es geht nicht.
 - **Nach einem Key-Wechsel muss die App neu starten.** Kein Watchdog nimmt dir das ab.
+- **Der Picker veraltet still.** Ohne den Modell-Sync aus `modules/05-picker-pflege.md` bleibt deine Auswahl auf dem Stand des Installationstags: neue Modelle fehlen, abgeschaltete stehen als tote Slugs herum und melden sich als `429`. Das fällt erst auf, wenn man es sucht.
+- **Ein Modell, das du aus dem Picker nimmst, kommt beim nächsten Sync zurück** — es steht ja weiter im Anbieter-Katalog. Dauerhaft raus hält es nur die `DENYLIST` im Sync-Skript.
 
 ---
 
