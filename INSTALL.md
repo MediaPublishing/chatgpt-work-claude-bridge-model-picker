@@ -33,6 +33,94 @@ Nutzerpfade stehen überall als `$HOME/...`. Schreibe nie absolute Pfade eines f
 
 Existiert `install-state.json` bereits? Dann lies sie, fasse dem Nutzer den Stand zusammen und setze beim ersten Schritt fort, der nicht `done` ist. Sonst neu beginnen.
 
+### 0a — Bestehende Router-Installation erkennen (HARTER STOPP)
+
+**Das ist der wichtigste Schritt in diesem Playbook.** Dieses Repo richtet auf einer frischen Maschine alles sauber ein. Auf einer Maschine, auf der bereits ein codex-router läuft, kann es eine **funktionierende Installation zerstören**: Branch gewechselt, `.env` ersetzt, Port migriert — und alle laufenden Codex-Sessions hängen mitten in der Arbeit.
+
+Das ist real passiert. Prüfe **vor allem anderen**, bevor du irgendetwas installierst, klonst oder änderst:
+
+```bash
+ROUTER_DIR="${CODEX_ROUTER_DIR:-$HOME/.local/share/codex-router}"
+FOUND=0
+
+[ -d "$ROUTER_DIR" ] && { echo "GEFUNDEN: Checkout unter $ROUTER_DIR"; FOUND=1; }
+[ -d "$HOME/.codex/codex-router" ] && { echo "GEFUNDEN: Router-State unter $HOME/.codex/codex-router"; FOUND=1; }
+grep -q "BEGIN codex-router-managed" "$HOME/.codex/config.toml" 2>/dev/null \
+  && { echo "GEFUNDEN: verwalteter Block in $HOME/.codex/config.toml"; FOUND=1; }
+grep -q "BEGIN kimi-codex-router-managed" "$HOME/.codex/config.toml" 2>/dev/null \
+  && { echo "GEFUNDEN: verwalteter Block einer ÄLTEREN Router-Version"; FOUND=1; }
+ls "$HOME/Library/LaunchAgents/io.github.codex-router.plist" >/dev/null 2>&1 \
+  && { echo "GEFUNDEN: LaunchAgent io.github.codex-router"; FOUND=1; }
+
+echo "---"
+[ "$FOUND" -eq 1 ] && echo "BESTAND VORHANDEN — Weiche unten, NICHT einfach weitermachen." \
+                   || echo "Kein Bestand. Normale Neuinstallation."
+```
+
+Ist Bestand da, erhebe zusätzlich den **konfigurierten Port** — den brauchst du für die Port-Falle:
+
+```bash
+sed -n 's#.*openai_base_url *= *"http://\([0-9.]*\):\([0-9][0-9]*\)/.*#\1:\2#p' \
+  "$HOME/.codex/config.toml" 2>/dev/null
+```
+
+> **Nur diesen `sed`-Befehl benutzen, kein `grep openai_base_url`.** Die vollständige Zeile enthält ein Geheimnis (ein Token im Pfad). Der Befehl oben gibt ausschließlich `host:port` aus. Zeig dem Nutzer nie die ganze Zeile und schreib sie in keine Datei und in kein Log.
+
+### 0b — Die Weiche (nur der Nutzer entscheidet)
+
+Wurde Bestand gefunden: **STOPP.** Installiere nichts, klone nichts, ändere nichts. Zeig dem Nutzer die Rohbefunde von oben und diese drei Möglichkeiten. Sag ihm ausdrücklich, dass (a) empfohlen ist:
+
+**(a) Bestehende Installation unangetastet lassen — EMPFEHLUNG und Standard.**
+Nur die Brücke und die Skills werden installiert. Konkret:
+- Module 01, 02 und 06 laufen normal.
+- **Modul 03 und 04 werden komplett übersprungen.** Kein `git clone`, kein `checkout`, kein `bin/install`, keine `.env`, keine Provider-Änderung.
+- **Modul 05 nur lesend**: `picker status` anschauen ist in Ordnung; nichts kuratieren, keinen Sync einrichten, keine LaunchAgents laden.
+- `existingInstall` auf `"preserved"` setzen.
+
+Das ist fast immer richtig: Wer schon einen Router hat, hat den Picker bereits. Was ihm fehlt, ist die Brücke — und die berührt den Router nicht.
+
+**(b) Bestehende Installation aktualisieren — nur für Leute, die wissen, was sie tun.**
+Erst nach **ausdrücklicher Bestätigung des Nutzers in Worten**. Ein „ja" auf eine andere Frage zählt nicht; frag klar: „Soll ich deine bestehende Router-Installation verändern? Das kann laufende Codex-Sessions unterbrechen." Warte auf ein eindeutiges Ja.
+
+Danach **zuerst vollständig sichern**, bevor du irgendetwas anfasst:
+
+```bash
+STAMP="$(date +%Y%m%d-%H%M%S)"
+SAFE="$HOME/.config/bridge-picker/pre-upgrade-$STAMP"
+mkdir -p "$SAFE"
+
+# 1. Checkout-Zustand als Branch festhalten (verliert nichts, auch bei lokalen Änderungen)
+git -C "$ROUTER_DIR" status --porcelain
+git -C "$ROUTER_DIR" rev-parse --abbrev-ref HEAD
+git -C "$ROUTER_DIR" branch "backup/pre-bridge-picker-$STAMP"
+
+# 2. Konfiguration, Umgebungsdatei und State kopieren
+cp "$HOME/.codex/config.toml" "$SAFE/config.toml" 2>/dev/null
+cp "$ROUTER_DIR/.env" "$SAFE/router.env" 2>/dev/null
+cp -R "$HOME/.codex/codex-router" "$SAFE/state" 2>/dev/null
+cp "$HOME/Library/LaunchAgents/io.github.codex-router.plist" "$SAFE/" 2>/dev/null
+
+echo "Sicherung: $SAFE"
+ls -la "$SAFE"
+```
+
+Nenne dem Nutzer den Pfad **und den Rückweg**, bevor du weitermachst:
+
+```bash
+# Rückweg nach einem missglückten Upgrade:
+cp "$SAFE/config.toml" "$HOME/.codex/config.toml"
+cp "$SAFE/router.env" "$ROUTER_DIR/.env"          # nur, falls vorher eine existierte
+git -C "$ROUTER_DIR" checkout "backup/pre-bridge-picker-$STAMP"
+cd "$ROUTER_DIR" && npm ci && node src/service.mjs restart
+# Danach Codex komplett beenden und neu öffnen.
+```
+
+Erst dann Modul 03 — und dort den Abschnitt „Bestandsfall" beachten. `existingInstall` auf `"upgraded-with-consent"` setzen.
+
+**(c) Abbruch.** Völlig legitim. Nichts wurde geändert, der Nutzer kann sich in Ruhe entscheiden.
+
+**Kein stillschweigendes Weitermachen.** Wählt der Nutzer nicht, gilt (a). Rate nie, was er gemeint haben könnte, und leg die Entscheidung nie in eine Nebenbemerkung — sie gehört als eigene Frage gestellt und als eigene Antwort beantwortet.
+
 ## Schritt 1 — Interview (nur fragen, was nötig ist)
 
 1. **Was willst du einrichten?**
@@ -64,6 +152,8 @@ Reihenfolge und Zuordnung (jedes Modul ist eigenständig; überspringe, was laut
 | `modules/04-provider.md` | B oder C | OpenCode- und/oder OpenRouter-Provider anbinden, Keys aus Nutzer-Dateien, Modelle kuratieren |
 | `modules/05-picker-pflege.md` | B oder C | Picker aufräumen (SOTA + gratis), Verbrauchslabels, **Modell-Sync**, Key-Rotation + Watchdog aus `tools/` |
 | `modules/06-handoff.md` | A oder C | `/handoff`: langen Chat verdichten und an ein neues Gespräch übergeben |
+
+**Bei `existingInstall: "preserved"` sind 03 und 04 gesperrt** und 05 ist nur lesend — unabhängig davon, was das Interview ergeben hat. Sag dem Nutzer in einem Satz, warum: Er hat den Picker bereits, und ein zweiter Installationslauf würde seine funktionierende Einrichtung anfassen.
 
 **Modul 06 auch bei B anbieten.** Es gehört formal zum Brücken-Pfad, ist aber unabhängig davon nützlich — gerade wer den Picker hat, braucht es: Ein Modellwechsel mitten im Gespräch scheitert an der Verdichtungsfalle, und `/handoff` ist der saubere Ausweg. Bei Interview-Antwort B fragst du den Nutzer, ob er es trotzdem will, statt es stillschweigend zu überspringen.
 
@@ -100,6 +190,7 @@ Diese Punkte gehören hinein — sammle sie mechanisch, rate nichts:
   "startedAt": "ISO-Datum",
   "agent": "claude-code | codex | anderes",
   "interview": { "scope": "A|B|C", "abos": ["chatgpt","claude","gemini"], "picker": ["opencode","openrouter"] },
+  "existingInstall": "none | preserved | upgraded-with-consent",
   "steps": {
     "01-cli-check": { "status": "done|in_progress|skipped|failed", "receipt": "Kurzbeleg", "at": "ISO" },
     "02-bruecke": { "status": "…" },
@@ -113,3 +204,13 @@ Diese Punkte gehören hinein — sammle sie mechanisch, rate nichts:
 ```
 
 Ein Schritt gilt erst als `done`, wenn sein Beleg (Testlauf/Readback) erbracht wurde — nicht, wenn die Befehle nur ausgeführt wurden.
+
+`existingInstall` schreibst du **direkt nach Schritt 0**, bevor irgendein Modul startet:
+
+| Wert | Bedeutung |
+|---|---|
+| `none` | Kein Bestand gefunden. Normale Neuinstallation, alle Module frei |
+| `preserved` | Bestand gefunden, Nutzer hat (a) gewählt. **Module 03 und 04 sind gesperrt**, Modul 05 nur lesend |
+| `upgraded-with-consent` | Bestand gefunden, Nutzer hat (b) ausdrücklich bestätigt **und** die Sicherung liegt vor. Pfad zur Sicherung gehört in `notes` |
+
+Steht dort `preserved`, führt kein späterer Schritt und keine spätere Rückfrage zu einer Router-Änderung. Auch nicht, wenn der Nutzer beiläufig „mach ruhig" sagt — dann gehst du zurück zur Weiche und lässt ihn (b) bewusst wählen.

@@ -18,7 +18,7 @@ Für den installierenden Agenten: Schlag hier nach, bevor du einen Fehler wieder
 | `403 … requires explicit opt in` | Zugriff verweigert | Eine **kontobezogene Freigabe** fehlt (z. B. Hosting-Region). Sie hängt am Konto des jeweiligen Keys — ein Key aus einem anderen Workspace verliert sie wieder |
 | `401 Insufficient balance` | Kein Guthaben | Du bist auf einem Endpunkt mit **Token-Abrechnung** gelandet statt auf dem Flat-Endpunkt. Endpunkt prüfen, nicht Guthaben nachladen |
 | `500` / `Endpoint is unavailable` | Server kaputt | Anbieterseitige Störung. Lokal ist nichts falsch. Abwarten |
-| `stream disconnected before completion: … 127.0.0.1` | Verbindung abgebrochen | Der lokale Router-Dienst **läuft nicht**. Kein Listener auf dem Port |
+| `stream disconnected before completion: … 127.0.0.1` | Verbindung abgebrochen | Niemand hört auf dem Port, den die App anspricht. Entweder **läuft der Dienst nicht** — oder die App spricht nach einer (Neu-)Installation den **falschen Port** an, siehe Abschnitt 7. Hängen plötzlich *alle* Threads, ist es fast immer der zweite Fall: App komplett neu starten |
 | `409 Provider … is hidden` | Provider gesperrt | Du hast den Provider selbst ausgeblendet (`providers disable`), das Gespräch läuft aber noch auf einem seiner Modelle. Neues Gespräch mit einem anderen Modell — siehe Abschnitt 4 |
 | `gateway exited before becoming healthy` (Schleife) | Gateway startet nicht | Die **.env-Falle**, siehe unten |
 | `unsupported scheme '<missing scheme>'` | Ungültige URL | In der abschattenden `.env` steht ein **leeres** `DATABASE_URL=`. Ein leerer Wert gilt als gesetzt |
@@ -181,7 +181,31 @@ Das gilt besonders für Fremdmodelle: `providers enable` meldet Erfolg, lange be
 
 ---
 
-## 7. Wenn nichts davon hilft
+## 7. Zweitinstallation: der gefährlichste Fall
+
+**Fehlerbild: Nach einer Installation hängen plötzlich alle Threads** — auch neue, auch solche mit nativen GPT-Modellen. Meist `stream disconnected before completion: … 127.0.0.1`.
+
+**Ursache:** Es lief bereits ein codex-router auf dieser Maschine, und der Installationslauf hat ihn umgebaut. Typisch trifft eines davon zu, oft mehrere gleichzeitig:
+
+- **Der Port hat sich geändert.** Ältere Installationen laufen auf `4102`, der aktuelle Standard ist `4202`. `bin/install` migriert die Konfiguration — die laufende Codex-App zeigt aber weiter auf den alten Port und findet niemanden mehr.
+- **Der Branch oder Commit wurde gewechselt.** Lokale Anpassungen sind damit aus dem Lauf verschwunden.
+- **Die `.env` im Router-Verzeichnis wurde ersetzt.** Falls dort echter Inhalt stand, fehlt er jetzt.
+
+**Sofortmaßnahme:** **Codex komplett beenden und neu öffnen.** Das allein repariert den häufigsten Fall, weil die App die Konfiguration erst beim Start liest. Fenster schließen reicht nicht.
+
+Hilft das nicht, prüfen, ob Konfiguration, LaunchAgent und laufender Dienst denselben Port nennen. Den konfigurierten Port liest man so aus — **niemals mit einem einfachen `grep`, die vollständige Zeile enthält ein Token**:
+
+```bash
+sed -n 's#.*openai_base_url *= *"http://\([0-9.]*\):\([0-9][0-9]*\)/.*#\1:\2#p' "$HOME/.codex/config.toml"
+```
+
+Bleibt es kaputt, ist der Rückweg die Sicherung aus `INSTALL.md` Schritt 0b (`~/.config/bridge-picker/pre-upgrade-<STAMP>/` plus der Git-Branch `backup/pre-bridge-picker-<STAMP>`). Wurde ohne Sicherung installiert, hilft nur noch: alten Zustand aus dem Git-Reflog des Checkouts suchen (`git -C "$ROUTER_DIR" reflog`) und `~/.codex/config.toml.pre-codex-router` prüfen.
+
+**Vorbeugen statt reparieren.** Der Guard in `INSTALL.md` Schritt 0 existiert genau dafür: Findet er eine bestehende Installation, wird nichts angefasst, bevor der Nutzer entschieden hat. Die richtige Antwort ist fast immer „Bestand unangetastet lassen" — wer schon einen Router hat, braucht aus diesem Repo nur die Brücke, und die berührt den Router nicht.
+
+---
+
+## 8. Wenn nichts davon hilft
 
 Diese Seite deckt die Fehlerbilder ab, die uns tatsächlich begegnet sind. Steht deines nicht hier, ist der Weg trotzdem derselbe — in dieser Reihenfolge:
 

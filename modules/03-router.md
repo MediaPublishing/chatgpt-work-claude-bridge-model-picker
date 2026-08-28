@@ -4,6 +4,48 @@
 **Ziel:** Ein lokaler Dienst entscheidet pro Modellname, ob eine Anfrage ans ChatGPT-Abo oder an einen Fremdanbieter geht. Native GPT-Modelle laufen unverändert übers Abo weiter.
 **Beleg am Ende:** je ein „pong" über ein natives und über ein geroutetes Modell.
 
+## STOPP — Bestandsfall zuerst klären
+
+**Bevor du irgendetwas in diesem Modul ausführst.** Auch dann, wenn du meinst, Schritt 0 aus `INSTALL.md` schon erledigt zu haben. Dieser Check steht hier ein zweites Mal, weil ein übersprungener Schritt 0 hier eine funktionierende Installation zerstört.
+
+```bash
+ROUTER_DIR="${CODEX_ROUTER_DIR:-$HOME/.local/share/codex-router}"
+FOUND=0
+[ -d "$ROUTER_DIR" ] && { echo "GEFUNDEN: $ROUTER_DIR"; FOUND=1; }
+[ -d "$HOME/.codex/codex-router" ] && { echo "GEFUNDEN: Router-State"; FOUND=1; }
+grep -qE "BEGIN (codex-router|kimi-codex-router)-managed" "$HOME/.codex/config.toml" 2>/dev/null \
+  && { echo "GEFUNDEN: verwalteter Block in config.toml"; FOUND=1; }
+ls "$HOME/Library/LaunchAgents/io.github.codex-router.plist" >/dev/null 2>&1 \
+  && { echo "GEFUNDEN: LaunchAgent"; FOUND=1; }
+[ "$FOUND" -eq 1 ] && echo "=> BESTAND. Ohne dokumentierte Zustimmung NICHT weitermachen." \
+                   || echo "=> Kein Bestand. Modul normal ausführen."
+```
+
+Findest du Bestand und steht in `install-state.json` **nicht** `existingInstall: "upgraded-with-consent"`, dann **brich dieses Modul ab** und geh zurück zur Weiche in `INSTALL.md` Schritt 0. Der Normalfall ist dort (a): Bestand unangetastet lassen, Modul 03 und 04 überspringen.
+
+**Diese drei Dinge fasst du bei einer bestehenden Installation nie ohne dokumentierte Zustimmung an** — jedes einzelne davon unterbricht laufende Codex-Sessions:
+
+1. **Den Branch oder Commit des Checkouts.** Kein `checkout`, kein `clone` darüber, kein `git am`.
+2. **Die `.env` im Router-Verzeichnis.** Eine bestehende Datei kann bewusst dort liegen und Inhalt haben. Nicht ersetzen, nicht leeren.
+3. **Den Port.** Siehe unten.
+
+### Die Port-Falle im Bestandsfall
+
+Eine ältere Installation kann auf einem **anderen Port** konfiguriert sein — typisch `4102` aus früheren Versionen, während der aktuelle Standard `4202` ist. Der Port steht an drei Stellen, und die müssen **alle drei denselben Wert** nennen: in `~/.codex/config.toml`, im LaunchAgent und im laufenden Dienst.
+
+Ein `bin/install` migriert die Konfiguration auf den neuen Standard. Läuft dabei eine Codex-App, zeigt sie weiter auf den alten Port — und **jeder Thread hängt sofort** mit `stream disconnected before completion: … 127.0.0.1`.
+
+Konfigurierten Port auslesen:
+
+```bash
+sed -n 's#.*openai_base_url *= *"http://\([0-9.]*\):\([0-9][0-9]*\)/.*#\1:\2#p' \
+  "$HOME/.codex/config.toml" 2>/dev/null
+```
+
+> **Nur so auslesen, nie mit `grep openai_base_url`.** Die vollständige Zeile enthält ein Token im Pfad. Der Befehl oben gibt nur `host:port` aus. Zeig die ganze Zeile niemandem und schreib sie in kein Log.
+
+Nach **jeder** Änderung am Port: prüfen, dass `config.toml`, LaunchAgent und Dienst übereinstimmen — und den Nutzer bitten, **Codex komplett zu beenden und neu zu öffnen**. Ohne App-Neustart bleibt es kaputt, egal wie richtig die Konfiguration ist.
+
 ## Warum überhaupt ein Router
 
 Codex kennt nur **einen** globalen Modell-Provider, und die Einträge im Modellkatalog haben kein Provider-Feld. Trägt man Fremdmodelle nur in den Katalog ein, erscheinen sie zwar im Picker, aber der Klick geht trotzdem an OpenAI und scheitert mit `The '<modell>' model is not supported when using Codex with a ChatGPT account`.
@@ -27,7 +69,7 @@ STATE_DIR="$HOME/.codex/codex-router"
 ls -l "$HOME/.codex/config.toml" 2>/dev/null || echo "Keine Codex-Config"
 ```
 
-Ist bereits ein Checkout vorhanden: **nicht** einfach überschreiben. Zeige dem Nutzer Commit und lokale Änderungen und frage, ob er neu aufsetzen oder abbrechen will.
+Ist bereits ein Checkout vorhanden: **nicht** einfach überschreiben — zurück zum STOPP-Abschnitt oben. Zeige dem Nutzer Commit und lokale Änderungen; ohne dokumentierte Zustimmung aus der Weiche in `INSTALL.md` Schritt 0 endet dieses Modul hier.
 
 ## Schritt 2 — Klonen und auf den geprüften Commit pinnen
 
@@ -141,7 +183,16 @@ Prüfen:
 ls -la "$HOME/.env" 2>/dev/null && grep -c DATABASE_URL "$HOME/.env" 2>/dev/null
 ```
 
-Wenn dort etwas liegt, eine abschattende `.env` **im Router-Verzeichnis** anlegen. Sie muss die globale überdecken, ohne selbst etwas zu setzen:
+**Zuerst prüfen, ob im Router-Verzeichnis schon eine `.env` liegt:**
+
+```bash
+[ -e "$ROUTER_DIR/.env" ] && { echo "ACHTUNG: $ROUTER_DIR/.env existiert bereits"; wc -l < "$ROUTER_DIR/.env"; } \
+                          || echo "Keine .env im Router-Verzeichnis"
+```
+
+Existiert sie, **überschreib sie nicht**. Sie kann bewusst dort liegen und echten Inhalt haben. Zeig dem Nutzer nur, dass es sie gibt und wie viele Zeilen sie hat — **nicht den Inhalt**, dort können Zugangsdaten stehen — und frag ihn, wie weiter. Im Zweifel: Finger weg und ohne diesen Schritt fortfahren.
+
+Liegt dort nichts, eine abschattende `.env` **im Router-Verzeichnis** anlegen. Sie muss die globale überdecken, ohne selbst etwas zu setzen:
 
 ```bash
 printf '# Absichtlich leer: schattet eine globale ~/.env ab.\n' > "$ROUTER_DIR/.env"
