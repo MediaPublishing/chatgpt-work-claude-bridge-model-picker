@@ -61,13 +61,13 @@ Dein Agent stellt dir dann ein paar Fragen (welche Abos du hast, was du willst) 
 - macOS (Linux weitgehend analog; Windows nicht getestet)
 - Für den Picker zusätzlich **Node.js 22.19 oder neuer** — das verlangt der Router. Für die Brücke allein reicht, was deine Apps mitbringen
 - Mindestens eines: ChatGPT-Abo (mit Codex/ChatGPT Work), Claude-Abo (mit Claude Code/Cowork), Google-Gemini-Abo
-- Für den Picker: eine [OpenCode-Go-Subscription](https://opencode.ai/go) und/oder ein kostenloses OpenRouter-Konto
+- Für den Picker: eine [OpenCode-Go-Subscription](https://learn.ainauten.com/opencode) und/oder ein kostenloses OpenRouter-Konto
 
 ### Zu OpenCode Go
 
 OpenCode Go ist die primäre Empfehlung für den Picker: ein Flat-Abo statt Token-Abrechnung, damit sind die Kosten planbar.
 
-Über einen Referral-Link ist der erste Monat oft günstiger (Größenordnung ~5 $, danach ~10 $/Monat). Links sammeln sich im [Referral-Thread in r/opencode](https://www.reddit.com/r/opencode/comments/1ubzi1z/opencode_go_referral_thread_drop_your_links/). **Prüf die aktuellen Konditionen immer bei OpenCode selbst** — Preise und Aktionen ändern sich, und die Zahlen hier sind eine Momentaufnahme. Dein Agent darf auch kurz nach einem aktuellen Deal suchen, bevor du abschließt.
+Über einen Referral-Link ist der erste Monat oft günstiger (Größenordnung ~5 $, danach ~10 $/Monat). Du kannst [unseren Referral-Link](https://learn.ainauten.com/opencode) nutzen (Offenlegung: wir erhalten dann ein kleines Startguthaben, du in der Regel auch) — oder einen beliebigen anderen aus dem [Referral-Thread in r/opencode](https://www.reddit.com/r/opencode/comments/1ubzi1z/opencode_go_referral_thread_drop_your_links/). **Prüf die aktuellen Konditionen immer bei OpenCode selbst** — Preise und Aktionen ändern sich, und die Zahlen hier sind eine Momentaufnahme. Dein Agent darf auch kurz nach einem aktuellen Deal suchen, bevor du abschließt.
 
 ## Prinzipien
 

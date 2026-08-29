@@ -21,7 +21,7 @@ Grundsatz: **Subscriptions vor APIs.** Ein Flat-Abo hat planbare Kosten. Token-A
 
 ### Zu den Konditionen von OpenCode Go
 
-Über einen Referral-Link ist der erste Monat oft günstiger (Größenordnung ~5 $, danach ~10 $/Monat). Links sammeln sich im [Referral-Thread in r/opencode](https://www.reddit.com/r/opencode/comments/1ubzi1z/opencode_go_referral_thread_drop_your_links/).
+Über einen Referral-Link ist der erste Monat oft günstiger (Größenordnung ~5 $, danach ~10 $/Monat). Du kannst [unseren Referral-Link](https://learn.ainauten.com/opencode) nutzen (Offenlegung: wir erhalten dann ein kleines Startguthaben, du in der Regel auch) — oder einen beliebigen anderen aus dem [Referral-Thread in r/opencode](https://www.reddit.com/r/opencode/comments/1ubzi1z/opencode_go_referral_thread_drop_your_links/).
 
 **Nenne dem Nutzer diese Zahlen als Momentaufnahme, nicht als Zusage.** Preise und Aktionen ändern sich; verbindlich ist nur, was OpenCode selbst auf seiner Seite und im Konto anzeigt. Wenn dir Websuche zur Verfügung steht, darfst du kurz nach dem aktuellen Stand oder einem laufenden Deal suchen, bevor der Nutzer abschließt — aber zeig ihm die Quelle und lass **ihn** entscheiden. Abgeschlossen wird die Subscription vom Nutzer selbst im Browser, nie von dir.
 
