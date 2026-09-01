@@ -19,6 +19,44 @@ Kein Web-Wrapper, keine UI-Automation, kein inoffizieller Proxy. Das ist keine B
 - **Kein Kontext-Dump.** Übergeben wird ein kompakter, für sich verständlicher Prompt — keine Secrets, keine API-Keys, keine Memories, keine internen Instructions, keine kompletten Chatverläufe.
 - Willst du echte Datei-Arbeit von einem anderen Modell, ist die Brücke das falsche Werkzeug. Dann öffnest du die andere App.
 
+## Der offizielle Weg für Claude Code
+
+Wer **Claude Code** nutzt und Codex erreichen will, hat seit Kurzem eine offizielle Option: OpenAI veröffentlicht ein eigenes Codex-Plugin für Claude Code. Das ist die empfohlene Erst-Option — probier es zuerst, bevor du die `/codex`-Brücke aus diesem Repo installierst.
+
+Installation direkt in Claude Code, drei Befehle:
+
+```
+/plugin marketplace add openai/codex-plugin-cc
+/plugin install codex@openai-codex
+/codex:setup
+```
+
+Der dritte Befehl prüft, ob dein lokales Codex-CLI angemeldet und bereit ist.
+
+Was das Plugin kann:
+
+- **`/codex:rescue`** — gibt eine festgefahrene Aufgabe an Codex ab. Codex sieht dabei dein Repo und arbeitet mit Werkzeugen, nicht nur mit Text.
+- **`/codex:transfer`** — übergibt die **komplette laufende Claude-Code-Session** als fortsetzbaren Codex-Thread. Du machst in Codex dort weiter, wo du in Claude aufgehört hast.
+- **`/codex:review`** und das **Review-Gate** — Codex prüft deine lokalen Git-Änderungen. Optional lässt sich ein Gate einschalten (`/codex:setup --enable-review-gate`), das am Ende jeder Session automatisch eine Codex-Review verlangt. Standardmäßig ist es aus.
+- Dazu `/codex:status`, `/codex:cancel`, `/codex:result` für laufende Hintergrundaufträge.
+
+Das Plugin ist offiziell von OpenAI (Apache-2.0).
+
+### Wo die Grenze verläuft — und wofür die Brücke aus diesem Repo bleibt
+
+Das Plugin macht mehr als unsere Brücke: es überträgt ganze Threads und zeigt Codex dein Repo. Genau deshalb ist es kein Ersatz, sondern eine andere Sache:
+
+| | OpenAI-Plugin | Brücke aus diesem Repo |
+|---|---|---|
+| Läuft in | nur Claude Code | Claude Code **und** Claude Cowork, ChatGPT Work/Codex |
+| Richtung | nur Claude → Codex | beide Richtungen, plus `/gemini` |
+| Übergabe | ganze Session, Repo-Kontext | ein Prompt, neutrales Arbeitsverzeichnis |
+| Fremdmodelle (DeepSeek, GLM, Qwen, Grok …) | nein | ja, über den Picker (Module 03–05) |
+
+Kurz: **Für Codex-Arbeit in Claude Code nimm das Plugin.** Für alles andere — Cowork, die Gegenrichtung, Gemini und vor allem die gerouteten Fremdmodelle — bleibt die Brücke. Beides parallel zu betreiben ist unproblematisch: die Plugin-Befehle heißen `/codex:…`, der Brücken-Skill heißt schlicht `/codex`.
+
+Und wie für jede Installation aus dem Netz gilt Grundregel 3: erst die mechanischen Prüfbefunde erheben und zeigen, dann installieren.
+
 ## Schritt 1 — Ist-Zustand prüfen
 
 Installiere nur Brücken zu Diensten, für die laut Modul 01 ein **angemeldetes CLI** existiert. Eine Brücke zu einem CLI ohne Abo ist ein garantierter Fehlschlag.

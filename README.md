@@ -56,6 +56,22 @@ in einen Arbeitsordner und folge exakt der Datei INSTALL.md in diesem Repo.
 
 Dein Agent stellt dir dann ein paar Fragen (welche Abos du hast, was du willst) und richtet alles passend ein. Er fragt **nie** nach Passwörtern — Logins machst du immer selbst.
 
+## Der offizielle Weg für Claude Code
+
+Nutzt du **Claude Code** und willst von dort aus Codex erreichen? Dann probier zuerst das offizielle Codex-Plugin von OpenAI — drei Befehle direkt in Claude Code:
+
+```
+/plugin marketplace add openai/codex-plugin-cc
+/plugin install codex@openai-codex
+/codex:setup
+```
+
+Es kann `/codex:rescue` (Aufgabe an Codex abgeben, mit Repo-Zugriff), `/codex:transfer` (die ganze laufende Session als fortsetzbaren Codex-Thread übergeben) und `/codex:review` samt optionalem Review-Gate am Session-Ende.
+
+**Wo die Grenze verläuft:** Das Plugin überträgt mehr als unsere Brücke — ganze Threads und Repo-Kontext. Dafür läuft es nur in Claude Code (nicht in Cowork), nur in Richtung Codex, und es erreicht keine Fremdmodelle. Für Cowork, die Gegenrichtung, `/gemini` und vor allem die gerouteten Modelle wie DeepSeek, GLM oder Qwen bleibt die Brücke aus diesem Repo. Beides parallel geht problemlos: die Plugin-Befehle heißen `/codex:…`, der Brücken-Skill schlicht `/codex`.
+
+Details in [`modules/02-bruecke.md`](modules/02-bruecke.md).
+
 ## Voraussetzungen
 
 - macOS (Linux weitgehend analog; Windows nicht getestet)
