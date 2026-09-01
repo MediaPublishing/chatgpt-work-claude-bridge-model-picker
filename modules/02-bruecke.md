@@ -171,3 +171,16 @@ Danach App neu starten. Es bleibt nichts zurück — die Brücke ändert weder K
   "backup": "$HOME/.config/bridge-picker/backups/<STAMP>",
   "at": "ISO-Datum" }
 ```
+
+## Eigene Modell-Kurzbefehle (optional): /deepseek, /glm & Co.
+
+Die Codex-Brücke aus Claude heraus erreicht mit „nutze <Modell>" jedes Modell, das im Codex-Picker steht — auch die gerouteten Fremdmodelle, wenn der Picker (Module 03–05) installiert ist. Wer ein Modell häufig nutzt, kann sich dafür einen eigenen Slash-Befehl anlegen: eine Kopie des `/codex`-Skills, fest auf ein Modell verdrahtet.
+
+Anleitung für den Agenten:
+
+1. Frage den Nutzer, welches Modell und welcher Befehlsname (z. B. `/deepseek` → `opencode-go/deepseek-v4-flash`). Der Slug muss in `"$CODEX_BIN" debug models` existieren — nicht raten.
+2. Kopiere `skills/claude/codex/SKILL.md` nach `~/.claude/skills/<befehlsname>/SKILL.md` und passe an: `name:` auf den Befehlsnamen, Beschreibung nennt das feste Modell, Schritt „Modellwahl" entfällt — der Aufruf nutzt immer `-m <fester-slug>`.
+3. Hinweis in der Beschreibung ergänzen, wessen Kontingent das Modell verbraucht (z. B. OpenCode-Abo).
+4. Testlauf: `/<befehlsname>` mit „Antworte mit genau einem Wort: pong" — Ausgabe zeigen.
+
+Grenzen: Es bleibt eine Frage-Antwort-Brücke (kein Thread-Takeover, keine Dateiarbeit durch das Fremdmodell). Verschwindet das Modell beim Anbieter, schlägt der Befehl mit den bekannten Fehlerbildern fehl (LEARNINGS) — dann Skill-Ordner löschen oder auf einen neuen Slug umstellen. Rückweg: `~/.claude/skills/<befehlsname>/` entfernen.
